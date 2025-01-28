@@ -15,7 +15,7 @@ app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
-app.use("/fixo-api", router);
+app.use("/api", router);
 app.use((req, res) => {
   res.status(404).json({
     message: "Endpoint not found. Please check the URL very well!",

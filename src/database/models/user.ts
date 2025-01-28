@@ -1,12 +1,14 @@
 import mongoose, { Schema } from "mongoose";
 
-interface IUser extends Document {
+export interface IUser extends Document {
+  _id: mongoose.Types.ObjectId | string;
   firstName: string;
   lastName?: string;
   email: string;
   username: string;
   password: string;
   role: string;
+  otpEnabled: boolean;
 }
 declare global {
   namespace Express {
@@ -44,6 +46,10 @@ const userSchema: Schema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    otpEnabled: {
+      type: Boolean,
+      default: false,
+    }
   },
   {
     timestamps: true,

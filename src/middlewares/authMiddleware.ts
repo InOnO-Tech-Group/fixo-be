@@ -1,17 +1,95 @@
 import httpStatus from "http-status";
 import { Request, Response, NextFunction } from "express";
 import authRepository from "../modules/auth/repository/authRepository";
-import { comparePassword } from "../helpers/auth";
+import { comparePassword, generateOTP, generateToken } from "../helpers/auth";
+import { ExtendedRequest } from "../types/auth";
+import { sendEmail } from "../services/emailService";
 
 export const isUserExistByEmail = async (
-  req: Request,
+  req: ExtendedRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   const { email } = req.body;
 
   try {
-    const user = await authRepository.findUserByEmail(email);
+
+    const user = await authRepository.findUserByAttribute("email", email);
+
+    if (!user) {
+      res.status(httpStatus.NOT_FOUND).json({
+        status: httpStatus.NOT_FOUND,
+        message: "User not found",
+      });
+      return
+    }
+
+    req.user = user;
+    return next();
+  } catch (error: any) {
+    return next(error)
+  }
+};
+
+
+export const isUserPasswordValid = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const { password } = req.body;
+  const isPasswordMatch = await comparePassword(password, req.user ? req.user.password : "");
+
+  try {
+    if (!isPasswordMatch) {
+      res.status(httpStatus.NOT_FOUND).json({
+        status: httpStatus.NOT_FOUND,
+        message: "Incorrect Password",
+      });
+      return;
+    }
+    next();
+  } catch (error: any) {
+    return next(error)
+  }
+};
+
+
+export const isOTPEnabled = async (req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (req.user?.otpEnabled) {
+      const otp = generateOTP()
+
+      await sendEmail(req.user.email, "OTP Verification", "OTP Verification", `Your OTP is ${otp}. This OTP will expire in 1 hour.`);
+
+      const session = await authRepository.saveSession({ userId: req?.user._id, content: otp });
+      res.status(httpStatus.OK).json({
+        status: httpStatus.OK,
+        message: "OTP sent successfully",
+        data: { session },
+      });
+      return;
+    }
+    return next();
+  } catch (error) {
+    return next(error)
+  }
+}
+
+export const isOTPValid = async (req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { userId, otp } = req.body;
+    const session = await authRepository.findSessionByTwoAttributes("userId", userId, "content", otp)
+
+    if (!session) {
+      res.status(httpStatus.BAD_REQUEST).json({
+        status: httpStatus.BAD_REQUEST,
+        message: "Invalid OTP",
+      });
+      return;
+    }
+
+    const user = await authRepository.findUserByAttribute("_id", userId);
 
     if (!user) {
       res.status(httpStatus.NOT_FOUND).json({
@@ -21,37 +99,11 @@ export const isUserExistByEmail = async (
       return;
     }
 
-    req.user = user;
-    next();
-  } catch (error: any) {
-    res.status(500).json({
-      status: 500,
-      message: error.message,
-    });
-  }
-};
+    await authRepository.deleteSession(session._id)
 
-export const isUserPasswordValid = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  const { password } = req.body;
-  const isPasswordMatch = await comparePassword(password, req.user?req.user.password:"");
-
-  try {
-    if (!isPasswordMatch) {
-      res.status(httpStatus.NOT_FOUND).json({
-        status: httpStatus.NOT_FOUND,
-        message: "User not found",
-      });
-      return;
-    }
+    req.user = user
     next();
-  } catch (error: any) {
-    res.status(500).json({
-      status: 500,
-      message: error.message,
-    });
+  } catch (error) {
+    return next(error);
   }
-};
+}

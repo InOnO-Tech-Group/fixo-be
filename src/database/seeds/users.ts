@@ -7,11 +7,21 @@ const seedUsers = async () => {
         {
             firstName: "inono",
             lastName: "akima",
+            username: "inonoakima",
             email: "akimana.inono@gmail.com",
             password: await hashPassword("password123"),
             role: "admin",
         },
-       
+        {
+            firstName: "Ndahimana",
+            lastName: "Bonheur",
+            username: "ndahimana154",
+            email: "ndahimana154@gmail.com",
+            password: await hashPassword("password123"),
+            role: "technician",
+            otpEnabled: true
+        },
+
     ];
 
     await User.deleteMany({});
