@@ -3,6 +3,7 @@ import { isSameCategoryExist } from "../middlewares/categoryMiddleware";
 import bodyValidation from "../middlewares/validationMiddleware";
 import { categorySchema } from "../modules/category/validation/categoryValidation";
 import categoryController from "../modules/category/controller/categoryController";
+import { isUserAuthorized } from "../middlewares/userAuthorization";
 const categoryRoute = express.Router();
-categoryRoute.post("/",bodyValidation(categorySchema),isSameCategoryExist,categoryController.createCategory)
+categoryRoute.post("/",isUserAuthorized(["admin"]),bodyValidation(categorySchema),isSameCategoryExist,categoryController.createCategory)
 export default categoryRoute;

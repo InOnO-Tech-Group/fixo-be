@@ -22,3 +22,16 @@ export const generateOTP = (): string => {
 
   return otp.toString().padStart(6, '0');
 }
+
+export const decodeToken = (token: string): any | null => {
+  try {
+      const secret = process.env.JWT_SECRET;
+      if (!secret) {
+          throw new Error("JWT_SECRET is not defined in the environment variables.");
+      }
+      return jwt.verify(token, secret);
+  } catch (error:any) {
+      console.error("Token verification error:", error.message);
+      return { status: 401, message: "Token verification failed" };
+  }
+};

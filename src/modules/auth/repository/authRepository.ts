@@ -5,6 +5,9 @@ import { Sessions } from "../../../types/auth";
 const findUserByAttribute = async (key: string, value: string) => {
   return await User.findOne({ [key]: value });
 };
+const findUserById = async (id:string) => {
+  return await User.findById(id);
+};
 const saveSession = async (data: Sessions) => {
   return await Session.create(data)
 }
@@ -19,6 +22,7 @@ const deleteSession = async (_id: any) => {
 
 export default {
   findUserByAttribute,
+  findUserById,
   saveSession,
   findSessionByTwoAttributes,
   deleteSession
