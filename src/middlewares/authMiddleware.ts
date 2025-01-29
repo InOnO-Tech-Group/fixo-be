@@ -17,8 +17,8 @@ export const isUserExistByEmail = async (
     const user = await authRepository.findUserByAttribute("email", email);
 
     if (!user) {
-      res.status(httpStatus.NOT_FOUND).json({
-        status: httpStatus.NOT_FOUND,
+      res.status(httpStatus.UNAUTHORIZED).json({
+        status: httpStatus.UNAUTHORIZED,
         message: "User not found",
       });
       return
@@ -42,8 +42,8 @@ export const isUserPasswordValid = async (
 
   try {
     if (!isPasswordMatch) {
-      res.status(httpStatus.NOT_FOUND).json({
-        status: httpStatus.NOT_FOUND,
+      res.status(httpStatus.UNAUTHORIZED).json({
+        status: httpStatus.UNAUTHORIZED,
         message: "Incorrect Password",
       });
       return;
