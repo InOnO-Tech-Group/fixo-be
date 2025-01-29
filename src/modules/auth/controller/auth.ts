@@ -18,7 +18,7 @@ const userLogin = async (req: ExtendedRequest, res: Response) => {
     });
   } catch (error: any) {
     res
-      .status(500)
+      .status(httpStatus.INTERNAL_SERVER_ERROR)
       .json({ message: "Internal server error", error: error.message });
   }
 };

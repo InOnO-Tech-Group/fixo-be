@@ -60,7 +60,7 @@ export const isOTPEnabled = async (req: ExtendedRequest, res: Response, next: Ne
     if (req.user?.otpEnabled) {
       const otp = generateOTP()
 
-      await sendEmail(req.user.email, "OTP Verification", "OTP Verification", `Your OTP is ${otp}. This OTP will expire in 1 hour.`);
+      await sendEmail(req.user.email, "OTP Verification", "OTP Verification", `Your OTP is <b>${otp}</b>. This OTP will expire in 1 hour.`);
 
       const session = await authRepository.saveSession({ userId: req?.user._id, content: otp });
       res.status(httpStatus.OK).json({
