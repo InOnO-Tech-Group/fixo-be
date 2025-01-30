@@ -8,3 +8,12 @@ export const productSchema = Joi.object({
     stock: Joi.number().required(),
     images: Joi.array().required(),
 });
+
+export const updateProductSchema = Joi.object({
+    name: Joi.string(),
+    description: Joi.string(),
+    price:Joi.number(),
+    category: Joi.string(),
+    stock: Joi.number(),
+    images: Joi.array(),
+});

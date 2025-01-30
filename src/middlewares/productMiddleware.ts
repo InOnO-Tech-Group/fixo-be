@@ -47,3 +47,47 @@ export const isSameProductExist = async (
     }
   };
   
+  export const isProductExistById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const product = await productRepository.findAllProductById(req.params.id);
+  
+      if (!product) {
+       res.status(httpStatus.NOT_FOUND).json({
+          status: httpStatus.NOT_FOUND,
+          message: "No product found!",
+        });
+        return ;
+      }
+  
+      req.product = product;
+      return next();
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  export const isSameProductOvelap = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { name , category} = req.body;
+      const product = await productRepository.findProductByNameAndId(req.params.id,name,category)
+  
+      if (product) {
+        res.status(httpStatus.BAD_REQUEST).json({
+          status: httpStatus.BAD_REQUEST,
+          message: "Same product already exists!",
+        });
+        return;
+      }
+      return next();
+    } catch (error) {
+      return next(error);
+    }
+  };
