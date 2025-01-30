@@ -11,8 +11,8 @@ const findAllCategories = async () => {
 };
 const findCategoryByNameAndId = async (id: string, name: string) => {
   return await Category.findOne({
-    _id: { $ne: id }, // Exclude the given ID
-    name: name, // Match the given name
+    _id: { $ne: id },
+    name: name,
   });
 };
 const findCategoryById = async (id: string) => {
