@@ -23,4 +23,27 @@ export const isSameProductExist = async (
       return next(error);
     }
   };
+
+  export const isProductsExist = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const products = await productRepository.findAllProducts();
+  
+      if (!products || products.length === 0) {
+       res.status(httpStatus.NOT_FOUND).json({
+          status: httpStatus.NOT_FOUND,
+          message: "No products found!",
+        });
+        return ;
+      }
+  
+      req.products = products;
+      return next();
+    } catch (error) {
+      return next(error);
+    }
+  };
   

@@ -17,6 +17,7 @@ declare global {
     namespace Express {
       interface Request {
         product?: IProduct;
+        products?:IProduct[]
       }
     }
   }

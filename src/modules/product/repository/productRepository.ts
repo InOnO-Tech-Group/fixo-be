@@ -7,4 +7,8 @@ const createProduct = async (data: IProduct) => {
   return await Product.create(data);
 };
 
-export default { findProductyByNameAndCategory, createProduct };
+const findAllProducts = async () => {
+    return await Product.find();
+  };
+  
+export default { findProductyByNameAndCategory, createProduct,findAllProducts };
