@@ -46,6 +46,30 @@ export const isSameProductExist = async (
       return next(error);
     }
   };
+
+  export const isProductsExistByCategory = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const {categoryId} = req.params
+      const products = await productRepository.findProductsByCategory(categoryId);
+  
+      if (!products || products.length === 0) {
+       res.status(httpStatus.NOT_FOUND).json({
+          status: httpStatus.NOT_FOUND,
+          message: "No products found!",
+        });
+        return ;
+      }
+  
+      req.products = products;
+      return next();
+    } catch (error) {
+      return next(error);
+    }
+  };
   
   export const isProductExistById = async (
     req: Request,

@@ -11,10 +11,13 @@ const createProduct = async (data: IProduct) => {
 };
 
 const findAllProducts = async () => {
-  return await Product.find();
+  return await Product.find().populate("category");
+};
+const findProductsByCategory = async (category:string) => {
+  return await Product.find({category}).populate("category");
 };
 const findAllProductById = async (id: string) => {
-  return await Product.findById(id);
+  return await Product.findById(id).populate("category");
 };
 
 const findProductByNameAndId = async (
@@ -40,6 +43,7 @@ export default {
   findProductyByNameAndCategory,
   createProduct,
   findAllProducts,
+  findProductsByCategory,
   findAllProductById,
   findProductByNameAndId,
   updateProduct,

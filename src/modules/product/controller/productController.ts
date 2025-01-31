@@ -21,8 +21,8 @@ const createProduct = async (req: Request, res: Response) => {
 
 const viewAvailableProducts = async (req: Request, res: Response) => {
   try {
-    res.status(httpStatus.CREATED).json({
-      status: httpStatus.CREATED,
+    res.status(httpStatus.OK).json({
+      status: httpStatus.OK,
       message: "Products retrieved Successfully",
       data: req.products,
     });
@@ -34,8 +34,8 @@ const viewAvailableProducts = async (req: Request, res: Response) => {
 };
 const viewSingleProduct = async (req: Request, res: Response) => {
   try {
-    res.status(httpStatus.CREATED).json({
-      status: httpStatus.CREATED,
+    res.status(httpStatus.OK).json({
+      status: httpStatus.OK,
       message: "Product retrieved Successfully",
       data: req.product,
     });
@@ -45,7 +45,6 @@ const viewSingleProduct = async (req: Request, res: Response) => {
       .json({ message: "Internal server error", error: error.message });
   }
 };
-
 const updateProduct = async (req: Request, res: Response) => {
   try {
     const productData = req.body;
