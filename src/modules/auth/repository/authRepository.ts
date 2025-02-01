@@ -1,11 +1,12 @@
+import mongoose from "mongoose";
 import Session from "../../../database/models/session";
-import User from "../../../database/models/user";
+import User, { IUser } from "../../../database/models/user";
 import { Sessions } from "../../../types/auth";
 
 const findUserByAttribute = async (key: string, value: string) => {
   return await User.findOne({ [key]: value });
 };
-const findUserById = async (id:string) => {
+const findUserById = async (id: string) => {
   return await User.findById(id);
 };
 const saveSession = async (data: Sessions) => {
@@ -20,10 +21,15 @@ const deleteSession = async (_id: any) => {
   return await Session.findByIdAndDelete(_id)
 }
 
+const updateUser = async (_id: any, data: IUser) => {
+  return await User.findByIdAndUpdate(_id, data, { new: true })
+}
+
 export default {
   findUserByAttribute,
   findUserById,
   saveSession,
   findSessionByTwoAttributes,
-  deleteSession
+  deleteSession,
+  updateUser
 };
