@@ -8,7 +8,7 @@ const productRoute = express.Router()
 productRoute.post("/",isUserAuthorized(["admin"]),bodyValidation(productSchema),isSameProductExist,productController.createProduct)
 productRoute.get("/",isProductsExist,productController.viewAvailableProducts)
 productRoute.get("/:categoryId",isProductsExistByCategory,productController.viewAvailableProducts)
-productRoute.get("/:id",isProductExistById,productController.viewSingleProduct)
+productRoute.get("/view/:id",isProductExistById,productController.viewSingleProduct)
 productRoute.put("/:id",isUserAuthorized(["admin"]),bodyValidation(updateProductSchema),isProductExistById,isSameProductOvelap,productController.updateProduct)
 productRoute.delete("/:id",isUserAuthorized(["admin"]),isProductExistById,productController.deleteProduct)
 
