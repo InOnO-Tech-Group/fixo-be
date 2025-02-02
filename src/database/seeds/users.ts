@@ -21,6 +21,24 @@ const seedUsers = async () => {
             role: "technician",
             otpEnabled: true
         },
+        {
+            firstName: "Demo",
+            lastName: "User1",
+            username: "demouser",
+            email: "demouser1@gmail.com",
+            password: await hashPassword("password123"),
+            role: "admin",
+            otpEnabled: false
+        },
+        {
+            firstName: "Demo",
+            lastName: "User2",
+            username: "demouser2",
+            email: "demouser2@gmail.com",
+            password: await hashPassword("password123"),
+            role: "technician",
+            otpEnabled: false
+        },
 
     ];
 
