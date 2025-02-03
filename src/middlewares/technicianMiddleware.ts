@@ -43,3 +43,28 @@ export const isSameuserEmailRegisterd = async (
       return next(error);
     }
   };
+
+  export const isAnyTechnician = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+  
+      const technicians = await technicianRepository.findAllTechnicians();
+  
+      if (!technicians) {
+        res.status(httpStatus.NOT_FOUND).json({
+          status: httpStatus.NOT_FOUND,
+          message: "No technicians found!",
+        });
+        return
+      }
+  
+      req.users = technicians;
+      return next();
+    } catch (error: any) {
+      return next(error)
+    }
+  };
+  

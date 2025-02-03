@@ -9,13 +9,21 @@ const findUserByUsername = async (username: string) => {
 const createTechnician = async (data: IUser) => {
   return await User.create(data);
 };
-const updateTechnicianStatus = async (id:string)=>{
-    return  await User.findByIdAndUpdate(
-        id,
-        [{ $set: { status: { $not: "$status" } } }],
-        { new: true }
-      );
-      
-}
+const findAllTechnicians = async () => {
+  return await User.find({ role: "technician" });
+};
+const updateTechnicianStatus = async (id: string) => {
+  return await User.findByIdAndUpdate(
+    id,
+    [{ $set: { status: { $not: "$status" } } }],
+    { new: true }
+  );
+};
 
-export default { findUseraByEmail, findUserByUsername, createTechnician ,updateTechnicianStatus};
+export default {
+  findUseraByEmail,
+  findUserByUsername,
+  createTechnician,
+  updateTechnicianStatus,
+  findAllTechnicians,
+};

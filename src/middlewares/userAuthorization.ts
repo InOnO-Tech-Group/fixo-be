@@ -4,6 +4,7 @@ import { decodeToken } from "../helpers/auth";
 import authRepository from "../modules/auth/repository/authRepository";
 import { IUser } from "../database/models/user";
 import { ISession } from "../database/models/session";
+import technicianRepository from "../modules/technician/repository/technicianRepository";
 
 declare global {
   namespace Express {
@@ -53,6 +54,14 @@ export const isUserAuthorized = (roles:Array<string>) => {
         return;
       }
 
+      if (! (user.status)){
+        res.status(httpStatus.UNAUTHORIZED).json({
+          status: httpStatus.UNAUTHORIZED,
+          message: "User is disabled for access, contact system admin for support!",
+        });
+        return;
+      }
+
       if (!roles.includes(user.role) && !roles.includes("All")) {
         res.status(httpStatus.UNAUTHORIZED).json({
           status: httpStatus.UNAUTHORIZED,
@@ -60,6 +69,7 @@ export const isUserAuthorized = (roles:Array<string>) => {
         });
         return;
       }
+
 
       req.user = user;
       req.session = session;

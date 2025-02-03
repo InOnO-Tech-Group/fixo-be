@@ -79,6 +79,24 @@ export const isUserPasswordValid = async (
     return next(error)
   }
 };
+export const isUserStatusValid = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (! (req.user ? req.user.status : false )){
+      res.status(httpStatus.UNAUTHORIZED).json({
+        status: httpStatus.UNAUTHORIZED,
+        message: "User is disabled for access, contact system admin for support!",
+      });
+      return;
+    }
+    next();
+  } catch (error: any) {
+    return next(error)
+  }
+};
 
 
 export const isOTPEnabled = async (req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> => {
