@@ -59,7 +59,7 @@ const userSchema: Schema = new mongoose.Schema(
     },
     status: {
       type: Boolean,
-      dafault: true,
+      default: true,
     },
   },
   {

@@ -19,4 +19,21 @@ const addNewTechnician = async (req: Request, res: Response) => {
   }
 };
 
-export default {addNewTechnician}
+const updateTechnicianStatus = async (req: Request, res: Response) => {
+    try {
+      const {id} = req.params;
+      const technician = await technicianRepository.updateTechnicianStatus(id)
+  
+      res.status(httpStatus.OK).json({
+        status: httpStatus.OK,
+        message: "Technician updated successfully",
+        data: technician,
+      });
+    } catch (error: any) {
+      res
+        .status(httpStatus.INTERNAL_SERVER_ERROR)
+        .json({ message: error.message });
+    }
+  };
+
+export default {addNewTechnician,updateTechnicianStatus}

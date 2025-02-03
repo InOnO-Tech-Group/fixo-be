@@ -4,8 +4,11 @@ import { userSchema } from "../modules/technician/validation/technicianValidatio
 import { isSameuserEmailRegisterd, isSameuserNameRegistered } from "../middlewares/technicianMiddleware";
 import technicianController from "../modules/technician/controller/technicianController";
 import { isUserAuthorized } from "../middlewares/userAuthorization";
+import { isUserExistById } from "../middlewares/authMiddleware";
 
 const technicianRoute = express.Router()
 technicianRoute.post("/new",isUserAuthorized(["admin"]),bodyValidation(userSchema),isSameuserEmailRegisterd,isSameuserNameRegistered,technicianController.addNewTechnician)
+technicianRoute.put("/status/:id",isUserAuthorized(["admin"]),isUserExistById,technicianController.updateTechnicianStatus)
+
 
 export default technicianRoute;
