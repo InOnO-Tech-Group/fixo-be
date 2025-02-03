@@ -9,7 +9,8 @@ export interface IUser extends Document {
   password: string;
   role: string;
   otpEnabled: boolean;
-  phone: string
+  phone: string;
+  status: boolean;
 }
 declare global {
   namespace Express {
@@ -55,7 +56,11 @@ const userSchema: Schema = new mongoose.Schema(
       type: String,
       required: false,
       unique: true,
-    }
+    },
+    status: {
+      type: Boolean,
+      dafault: true,
+    },
   },
   {
     timestamps: true,
