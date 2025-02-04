@@ -7,7 +7,7 @@ const addNewTechnician = async (req: Request, res: Response) => {
   try {
     let technicianData = req.body;
     const hashedPassword = await hashPassword(technicianData.password)
-    technicianData = {...technicianData,password:hashPassword}
+    technicianData = {...technicianData,password:hashedPassword}
 
     const technician = await technicianRepository.createTechnician(technicianData)
 
