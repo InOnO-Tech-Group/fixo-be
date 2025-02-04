@@ -31,6 +31,32 @@ export const isUserExistByEmail = async (
   }
 };
 
+export const isUserExistById = async (
+  req: ExtendedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const { id } = req.params;
+
+  try {
+
+    const user = await authRepository.findUserById(id);
+
+    if (!user) {
+      res.status(httpStatus.NOT_FOUND).json({
+        status: httpStatus.NOT_FOUND,
+        message: "User not found",
+      });
+      return
+    }
+
+    req.user = user;
+    return next();
+  } catch (error: any) {
+    return next(error)
+  }
+};
+
 
 export const isUserPasswordValid = async (
   req: Request,
@@ -45,6 +71,24 @@ export const isUserPasswordValid = async (
       res.status(httpStatus.UNAUTHORIZED).json({
         status: httpStatus.UNAUTHORIZED,
         message: "Incorrect Password",
+      });
+      return;
+    }
+    next();
+  } catch (error: any) {
+    return next(error)
+  }
+};
+export const isUserStatusValid = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (! (req.user ? req.user.status : false )){
+      res.status(httpStatus.UNAUTHORIZED).json({
+        status: httpStatus.UNAUTHORIZED,
+        message: "User is disabled for access, contact system admin for support!",
       });
       return;
     }
