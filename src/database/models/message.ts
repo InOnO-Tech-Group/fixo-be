@@ -1,23 +1,23 @@
 import mongoose, { Document } from "mongoose";
 const { ObjectId } = mongoose.Schema;
 export interface IMessage extends Document {
-    _id: mongoose.Types.ObjectId | string;
-    senderId: mongoose.Types.ObjectId | string;
-    receiverId: mongoose.Types.ObjectId | string;
-    content: string;
-    createdAt: Date;
-    updatedAt: Date;
-  }
+  _id: mongoose.Types.ObjectId | string;
+  senderId: mongoose.Types.ObjectId | string;
+  receiverId: mongoose.Types.ObjectId | string;
+  content: string;
+  isRead: Boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-  declare global {
-    namespace Express {
-      interface Request {
-        message?: IMessage;
-        messages?:IMessage[]
-      }
+declare global {
+  namespace Express {
+    interface Request {
+      message?: IMessage;
+      messages?: IMessage[];
     }
   }
-  
+}
 
 const MessageSchema = new mongoose.Schema(
   {
@@ -31,7 +31,15 @@ const MessageSchema = new mongoose.Schema(
       ref: "users",
       required: true,
     },
-    content: { type: String, required: true },
+    content: {
+      type: String,
+      required: true,
+    },
+    isRead: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
   },
   { timestamps: true }
 );
