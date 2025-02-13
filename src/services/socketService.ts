@@ -1,38 +1,50 @@
-import { Server as SocketIOServer } from "socket.io";
-import { Server as HTTPServer } from "http";
+import { Server } from "socket.io";
+import { Server as HttpServer } from "http";
 
-const setupSocket = (server: HTTPServer) => {
-  const io = new SocketIOServer(server, {
+const users: Record<string, string> = {};
+
+const setupSocket = (server: HttpServer) => {
+  const io = new Server(server, {
     cors: {
-      origin: "*", // Allow all origins (adjust as needed)
+      origin: "*",
       methods: ["GET", "POST"],
     },
   });
 
   io.on("connection", (socket) => {
-    console.log(`User connected: ${socket.id}`);
-
-    // Handle receiving a message
-    socket.on("sendMessage", ({ senderId, receiverId, message }) => {
-      console.log(`Message from ${senderId} to ${receiverId}: ${message}`);
-
-      // Emit message to the specific receiver
-      io.to(receiverId).emit("receiveMessage", { senderId, message });
+    console.log(`⚡ User connected: ${socket.id}`);
+    socket.on("register", (userId: string) => {
+      users[userId] = socket.id;
+      console.log(`🟢 User ${userId} is online`);
     });
 
-    // Handle user joining a room (user's own ID as room)
-    socket.on("joinRoom", (userId) => {
-      socket.join(userId);
-      console.log(`User ${userId} joined their room`);
-    });
+    socket.on("newMessage", (data) => {
+      console.log("🔄 Forwarding message:", data);
 
-    // Handle disconnection
+      const { senderId, receiverId, message } = data;
+      const receiverSocketId = users[receiverId];
+
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("receiveMessage", { senderId, message });
+        console.log(`📩 Message sent from ${senderId} to ${receiverId}: ${message}`);
+      } else {
+        console.log(`❌ ${receiverId} is offline, message not delivered.`);
+      }
+    });
+    socket.on("receiveMessage", (data) => {
+      console.log("�� Received message:", data);
+    })
+
     socket.on("disconnect", () => {
-      console.log(`User disconnected: ${socket.id}`);
+      const userId = Object.keys(users).find((key) => users[key] === socket.id);
+      if (userId) {
+        delete users[userId];
+        console.log(`❌ User ${userId} disconnected`);
+      }
     });
   });
 
   return io;
 };
 
-export default setupSocket;
+export { users, setupSocket };

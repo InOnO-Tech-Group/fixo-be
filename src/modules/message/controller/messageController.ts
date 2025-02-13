@@ -2,17 +2,18 @@ import { Request, Response } from "express";
 import messageRepository from "../repository/messageRepository";
 import httpStatus from "http-status";
 import { io } from "../../..";
+import { users } from "../../../services/socketService";
 
 const sendMessage = async (req: Request, res: Response) => {
   try {
     const { receiverId, content } = req.body;
-    const message = await messageRepository.sendMessage(
-      req.user ? req.user._id : req.body.senderId,
-      receiverId,
-      content
-    );
+    const senderId = req.user ? req.user._id : req.body.senderId;
+    const message = await messageRepository.sendMessage(senderId, receiverId, content);
 
-    /* io.to(receiverId).emit("receiveMessage", message);*/
+    const receiverSocketId = users[receiverId];
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("receiveMessage", { senderNames: `${req?.user?.firstName} ${req?.user?.lastName}`, senderId, message });
+    }
 
     res.status(httpStatus.CREATED).json({
       status: httpStatus.CREATED,
@@ -20,22 +21,24 @@ const sendMessage = async (req: Request, res: Response) => {
       data: message,
     });
   } catch (error: any) {
-    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
-      message: error.message,
-    });
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({ message: error.message });
   }
 };
 
+
 const getMessages = async (req: Request, res: Response) => {
   try {
+
     const { receiverId } = req.params;
-    const messages = await messageRepository.getMessages(
-      req.user ? req.user._id : req.body.senderId,
-      receiverId
-    );
+    const senderId = req.user ? req.user._id : req.body.senderId;
+
+    const messages = await messageRepository.getMessages(senderId, receiverId);
+
+    await messageRepository.markMessagesAsRead(senderId, receiverId);
+
     res.status(httpStatus.OK).json({
       status: httpStatus.OK,
-      message: "Message retrieved successfully",
+      message: "Messages retrieved successfully",
       data: messages,
     });
   } catch (error: any) {
@@ -43,9 +46,13 @@ const getMessages = async (req: Request, res: Response) => {
   }
 };
 
+
 const getMyChats = async (req: Request, res: Response) => {
   try {
-    const chats = await messageRepository.getAllUsersForChat(
+    // const chats = await messageRepository.getAllUsersForChat(
+    //   req.user ? req.user._id : req.body.senderId
+    // );
+    const chats = await messageRepository.getMyChats(
       req.user ? req.user._id : req.body.senderId
     );
 

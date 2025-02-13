@@ -6,7 +6,7 @@ import { createServer } from "http";
 import { Request, Response } from "express";
 import dbConnection from "./database/config/config";
 import router from "./routes";
-import setupSocket from "./services/socketService"; // Import the socket setup function
+import { setupSocket } from "./services/socketService"; // Import the socket setup function
 
 dotenv.config();
 
