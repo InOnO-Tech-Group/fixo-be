@@ -18,7 +18,7 @@ const getMessages = async (senderId: string, receiverId: string) => {
   })
     .populate("senderId")
     .populate("receiverId")
-    .sort({ createdAt: 1 });
+    .sort({ createdAt: -1 });
 };
 
 const getMyChats = async (userId: any) => {
