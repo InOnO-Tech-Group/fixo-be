@@ -11,12 +11,13 @@ export interface IUser extends Document {
   otpEnabled: boolean;
   phone: string;
   status: boolean;
+  socketId: string;
 }
 declare global {
   namespace Express {
     interface Request {
       user?: IUser;
-      users?:IUser[]
+      users?: IUser[]
     }
   }
 }
@@ -62,6 +63,10 @@ const userSchema: Schema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    socketId: {
+      type: String,
+      default: false
+    }
   },
   {
     timestamps: true,

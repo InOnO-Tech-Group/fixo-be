@@ -25,11 +25,16 @@ const updateUser = async (_id: any, data: IUser) => {
   return await User.findByIdAndUpdate(_id, data, { new: true })
 }
 
+const findAllUsers = async () => {
+  return await User.find();
+}
+
 export default {
   findUserByAttribute,
   findUserById,
   saveSession,
   findSessionByTwoAttributes,
   deleteSession,
-  updateUser
+  updateUser,
+  findAllUsers
 };
