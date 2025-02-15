@@ -6,12 +6,12 @@ import { createServer } from "http";
 import { Request, Response } from "express";
 import dbConnection from "./database/config/config";
 import router from "./routes";
-import { setupSocket } from "./services/socketService"; // Import the socket setup function
+import { setupSocket } from "./services/socketService";
 
 dotenv.config();
 
 const app = express();
-const server = createServer(app); // Create HTTP server
+const server = createServer(app);
 
 app.use(express.json());
 app.use(cors());
@@ -31,7 +31,6 @@ app.get("/", (req: Request, res: Response) => {
   });
 });
 
-// Initialize Socket.IO
 const io = setupSocket(server);
 
 const PORT = process.env.PORT || 3000;
@@ -46,4 +45,4 @@ dbConnection()
     console.error("Error connecting to the database:", error);
   });
 
-export { io }; // Export io for use in other files if needed
+export { io };

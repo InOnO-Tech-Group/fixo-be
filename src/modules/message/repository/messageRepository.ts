@@ -20,8 +20,9 @@ const getMessages = async (senderId: string, receiverId: string) => {
     .populate("receiverId")
     .sort({ createdAt: -1 });
 };
-
 const getMyChats = async (userId: any) => {
+  const allUsers = await User.find({ _id: { $ne: userId } }).select("firstName lastName username");
+
   const recentChats = await Message.aggregate([
     {
       $match: {
@@ -31,50 +32,40 @@ const getMyChats = async (userId: any) => {
         ]
       }
     },
-    {
-      $sort: { createdAt: -1 }
-    },
+    { $sort: { createdAt: -1 } },
     {
       $group: {
         _id: {
           $cond: {
             if: { $eq: ["$senderId", userId] },
-            then: "$receiverId", // Group by receiver if the current user is the sender
-            else: "$senderId" // Group by sender if the current user is the receiver
+            then: "$receiverId",
+            else: "$senderId"
           }
         },
-        lastMessage: { $first: "$content" }, // Get the content of the last message
-        lastMessageDate: { $first: "$createdAt" }, // Get the timestamp of the last message
-        lastMessageIsRead: { $first: "$isRead" } // Get the read status of the last message
+        lastMessage: { $first: "$content" },
+        lastMessageDate: { $first: "$createdAt" },
+        lastMessageIsRead: { $first: "$isRead" }
       }
-    },
-    {
-      $lookup: {
-        from: "users", // Assuming the users are stored in a 'users' collection
-        localField: "_id", // The user you're chatting with
-        foreignField: "_id", // The user's ID in the 'users' collection
-        as: "userInfo"
-      }
-    },
-    {
-      $unwind: "$userInfo" // Unwind the user data to access individual fields
-    },
-    {
-      $project: {
-        userId: "$_id",
-        firstName: "$userInfo.firstName",
-        lastName: "$userInfo.lastName",
-        username: "$userInfo.username", // Assuming there's a 'username' field
-        lastMessage: 1,
-        lastMessageDate: 1,
-        lastMessageIsRead: 1
-      }
-    }, { $sort: { lastMessageDate: -1 } }
+    }
   ]);
 
-  return recentChats;
+  const chatMap = new Map(recentChats.map(chat => [chat._id.toString(), chat]));
 
+  const usersWithChatData = allUsers.map(user => {
+    const chatData = chatMap.get(user._id.toString()) || {};
+    return {
+      userId: user._id,
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      username: user.username,
+      lastMessage: chatData.lastMessage || null,
+      lastMessageDate: chatData.lastMessageDate || null,
+      lastMessageIsRead: chatData.lastMessageIsRead ?? null
+    };
+  });
 
+  return usersWithChatData.sort((a, b) => (b.lastMessageDate || 0) - (a.lastMessageDate || 0));
 };
 
 const getAllUsersForChat = async (userId: string) => {

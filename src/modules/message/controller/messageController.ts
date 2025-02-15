@@ -3,6 +3,7 @@ import messageRepository from "../repository/messageRepository";
 import httpStatus from "http-status";
 import { io } from "../../..";
 import { users } from "../../../services/socketService";
+import authRepository from "../../auth/repository/authRepository";
 
 const sendMessage = async (req: Request, res: Response) => {
   try {
@@ -42,16 +43,16 @@ const getMessages = async (req: Request, res: Response) => {
       data: messages,
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: httpStatus.INTERNAL_SERVER_ERROR,
+      error: error.message
+    });
   }
 };
 
 
 const getMyChats = async (req: Request, res: Response) => {
   try {
-    // const chats = await messageRepository.getAllUsersForChat(
-    //   req.user ? req.user._id : req.body.senderId
-    // );
     const chats = await messageRepository.getMyChats(
       req.user ? req.user._id : req.body.senderId
     );
@@ -65,4 +66,30 @@ const getMyChats = async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message });
   }
 };
-export default { sendMessage, getMessages, getMyChats };
+
+
+const getChatsLists = async (req: any, res: Response): Promise<any> => {
+  try {
+    const users = await authRepository.findAllUsers();
+
+    return res.status(httpStatus.OK).json({
+      status: httpStatus.OK,
+      message: "Users retrieved successfully",
+      data: { users },
+    });
+  } catch (error: any) {
+    console.error("Error fetching users:", error.message);
+
+    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: httpStatus.INTERNAL_SERVER_ERROR,
+      message: error.message,
+    });
+  }
+};
+
+export default {
+  sendMessage,
+  getMessages,
+  getMyChats,
+  getChatsLists
+};

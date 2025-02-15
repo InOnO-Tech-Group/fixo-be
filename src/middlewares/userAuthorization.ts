@@ -15,11 +15,10 @@ declare global {
   }
 }
 
-export const isUserAuthorized = (roles:Array<string>) => {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const isUserAuthorized = (roles: Array<string>) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<any> => {
     try {
       const token = req.headers["authorization"]?.split(" ")[1];
-
       if (!token) {
         res.status(httpStatus.UNAUTHORIZED).json({
           status: httpStatus.UNAUTHORIZED,
@@ -28,7 +27,7 @@ export const isUserAuthorized = (roles:Array<string>) => {
         return;
       }
 
-      const decoded:any = await decodeToken(token)
+      const decoded: any = await decodeToken(token)
       const session = await authRepository.findSessionByTwoAttributes(
         "userId",
         decoded._id,
@@ -54,7 +53,7 @@ export const isUserAuthorized = (roles:Array<string>) => {
         return;
       }
 
-      if (! (user.status)){
+      if (!(user.status)) {
         res.status(httpStatus.UNAUTHORIZED).json({
           status: httpStatus.UNAUTHORIZED,
           message: "User is disabled for access, contact system admin for support!",
@@ -70,12 +69,11 @@ export const isUserAuthorized = (roles:Array<string>) => {
         return;
       }
 
-
       req.user = user;
       req.session = session;
-      next();
+      return next();
     } catch (error: any) {
-      res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
         status: httpStatus.INTERNAL_SERVER_ERROR,
         message: error.message,
       });
