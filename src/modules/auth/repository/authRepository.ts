@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import Session from "../../../database/models/session";
 import User, { IUser } from "../../../database/models/user";
 import { Sessions } from "../../../types/auth";
@@ -21,7 +20,7 @@ const deleteSession = async (_id: any) => {
   return await Session.findByIdAndDelete(_id)
 }
 
-const updateUser = async (_id: any, data: IUser) => {
+const updateUser = async (_id: any, data: any) => {
   return await User.findByIdAndUpdate(_id, data, { new: true })
 }
 

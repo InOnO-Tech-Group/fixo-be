@@ -7,10 +7,11 @@ import { isUserAuthorized } from "../middlewares/userAuthorization"
 
 const authRoute = express.Router()
 
-authRoute.post("/login", bodyValidation(loginSchema), isUserExistByEmail, isUserPasswordValid,isUserStatusValid, isOTPEnabled, authControllers.userLogin)
+authRoute.post("/login", bodyValidation(loginSchema), isUserExistByEmail, isUserPasswordValid, isUserStatusValid, isOTPEnabled, authControllers.userLogin)
 authRoute.post("/verify-otp", bodyValidation(verifyOTPSchema), isOTPValid, authControllers.userLogin)
 
 authRoute.get("/view-profile", isUserAuthorized(["All"]), authControllers.userViewProfile)
-authRoute.put("/update-profile", isUserAuthorized(["All"]), bodyValidation(updateProfileSchema),authControllers.userUpdateProfile)
+authRoute.put("/update-profile", isUserAuthorized(["All"]), bodyValidation(updateProfileSchema), authControllers.userUpdateProfile)
 
+authRoute.put("/upload-profile-image", isUserAuthorized(["All"]), )
 export default authRoute

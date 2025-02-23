@@ -59,12 +59,12 @@ export const isUserExistById = async (
 
 
 export const isUserPasswordValid = async (
-  req: Request,
+  req: ExtendedRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   const { password } = req.body;
-  const isPasswordMatch = await comparePassword(password, req.user ? req.user.password : "");
+  const isPasswordMatch = await comparePassword(password, req?.user?.password)
 
   try {
     if (!isPasswordMatch) {
@@ -85,7 +85,7 @@ export const isUserStatusValid = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    if (! (req.user ? req.user.status : false )){
+    if (!(req.user ? req.user.status : false)) {
       res.status(httpStatus.UNAUTHORIZED).json({
         status: httpStatus.UNAUTHORIZED,
         message: "User is disabled for access, contact system admin for support!",
@@ -104,9 +104,10 @@ export const isOTPEnabled = async (req: ExtendedRequest, res: Response, next: Ne
     if (req.user?.otpEnabled) {
       const otp = generateOTP()
 
-      await sendEmail(req.user.email, "OTP Verification", "OTP Verification", `Your OTP is <b>${otp}</b>. This OTP will expire in 1 hour.`);
+      await sendEmail(String(req?.user?.email), "OTP Verification", "OTP Verification", `Your OTP is <b>${otp}</b>. This OTP will expire in 1 hour.`);
 
-      const session = await authRepository.saveSession({ userId: req?.user._id, content: otp });
+      const session = await authRepository.saveSession({ userId: String(req?.user?._id), content: otp });
+      
       res.status(httpStatus.OK).json({
         status: httpStatus.OK,
         message: "OTP sent successfully",

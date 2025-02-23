@@ -61,7 +61,7 @@ export const isUserAuthorized = (roles: Array<string>) => {
         return;
       }
 
-      if (!roles.includes(user.role) && !roles.includes("All")) {
+      if (!roles.includes(String(user?.role)) && !roles.includes("All")) {
         res.status(httpStatus.UNAUTHORIZED).json({
           status: httpStatus.UNAUTHORIZED,
           message: "Invalid user role!",

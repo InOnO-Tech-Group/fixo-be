@@ -1,17 +1,18 @@
 import mongoose, { Schema } from "mongoose";
 
 export interface IUser extends Document {
-  _id: mongoose.Types.ObjectId | string;
-  firstName: string;
+  _id?: mongoose.Types.ObjectId | string;
+  firstName?: string;
   lastName?: string;
-  email: string;
-  username: string;
-  password: string;
-  role: string;
-  otpEnabled: boolean;
-  phone: string;
-  status: boolean;
-  socketId: string;
+  email?: string;
+  username?: string;
+  password?: string;
+  role?: string;
+  otpEnabled?: boolean;
+  phone?: string;
+  status?: boolean;
+  socketId?: string;
+  profile?: string;
 }
 declare global {
   namespace Express {
@@ -66,6 +67,11 @@ const userSchema: Schema = new mongoose.Schema(
     socketId: {
       type: String,
       default: false
+    },
+    profile: {
+      type: String,
+      default: null,
+      required: false
     }
   },
   {

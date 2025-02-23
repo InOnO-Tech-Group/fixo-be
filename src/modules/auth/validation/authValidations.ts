@@ -20,3 +20,7 @@ export const updateProfileSchema = Joi.object({
     role: Joi.string().max(150),
     username: Joi.string().max(50)
 })
+
+export const uploadProfileIMage = Joi.object({
+    profile: Joi.string().required()
+})

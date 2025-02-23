@@ -9,7 +9,7 @@ export const hashPassword = async (password: string) => {
   return await bcrypt.hash(password, 10);
 }
 
-export const comparePassword = async (password: string, hashedPassword: string) => {
+export const comparePassword = async (password: string, hashedPassword: any) => {
   return await bcrypt.compare(password, hashedPassword);
 }
 
@@ -25,13 +25,13 @@ export const generateOTP = (): string => {
 
 export const decodeToken = (token: string): any | null => {
   try {
-      const secret = process.env.JWT_SECRET;
-      if (!secret) {
-          throw new Error("JWT_SECRET is not defined in the environment variables.");
-      }
-      return jwt.verify(token, secret);
-  } catch (error:any) {
-      console.error("Token verification error:", error.message);
-      return { status: 401, message: "Token verification failed" };
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error("JWT_SECRET is not defined in the environment variables.");
+    }
+    return jwt.verify(token, secret);
+  } catch (error: any) {
+    console.error("Token verification error:", error.message);
+    return { status: 401, message: "Token verification failed" };
   }
 };

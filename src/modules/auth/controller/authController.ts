@@ -48,6 +48,14 @@ const userUpdateProfile = async (req: ExtendedRequest, res: Response): Promise<a
   }
 }
 
+const uploadProfilePicture = async (req: ExtendedRequest, res: Response): Promise<any> => {
+  try {
+    const profile = authRepository.updateUser(req.user?._id, { profile: req.body.profile });
+  } catch (error: any) {
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({ message: error.message, status: httpStatus.INTERNAL_SERVER_ERROR })
+  }
+}
+
 export default {
   userLogin,
   userViewProfile,
