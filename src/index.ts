@@ -6,7 +6,7 @@ import { createServer } from "http";
 import { Request, Response } from "express";
 import dbConnection from "./database/config/config";
 import router from "./routes";
-import { setupSocket } from "./services/socketService";
+import { getPendingCalls, setupSocket } from "./services/socketService";
 
 dotenv.config();
 
@@ -18,6 +18,14 @@ app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
+app.get("/pend",async(req,res)=>{
+  console.log(await getPendingCalls);
+  
+  res.status(200).json({data:await getPendingCalls,
+    message:"mm"
+  })
+  
+})
 app.use("/api", router);
 app.use((req, res) => {
   res.status(404).json({
