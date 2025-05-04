@@ -4,6 +4,12 @@ import paymentRepositories from '../repository/paymentRepositories';
 import { paypack, PAYPACK_ENVIRONMENT } from '../../../services/paypackService';
 import authRepository from '../../auth/repository/authRepository';
 
+const BAD_REQUEST = httpStatus.BAD_REQUEST;
+const INTERNAL_ERROR = httpStatus.INTERNAL_SERVER_ERROR;
+const SUCCESS = httpStatus.OK;
+const SERVICE_FEE = process.env.SERVICE_FEE || 0.4;
+const TRANSACTION_FEE_RATE = process.env.TRANSACTION_FEE || 0.023;
+
 class PaymentTimeoutError extends Error {
     constructor(message: string) {
         super(message);
@@ -36,24 +42,40 @@ const requestPaypackPayment = async (req: Request, res: Response): Promise<any> 
         req.body.depositId = transactionId;
         req.body.technician = req.user?._id;
         req.body.status = "paid";
-        req.body.serviceFee = 0.4
+        req.body.serviceFee = SERVICE_FEE
         req.body.requestedAmount = req.body.amount;
-        req.body.receivedAmount = req.body.amount * (1 - req.body.serviceFee);
+        req.body.receivedAmount = req.body.amount * (1 - Number(SERVICE_FEE));
 
         const techCurrentBalance = req.user?.balance || 0;
+
         const newBalance = techCurrentBalance + req.body.receivedAmount;
 
-        const [newRequest, updateTechBalance] = await Promise.all([
+        const serviceFee = req.body.amount * req.body.serviceFee;
+        const transactionFee = req.body.amount * Number(TRANSACTION_FEE_RATE)
+        const netIncome = serviceFee - transactionFee;
+
+        const incomeData = {
+            grossAmount: req.body.amount,
+            serviceFee: serviceFee,
+            transactionFee: transactionFee,
+            netIncome: netIncome,
+            type: "in",
+            description: `Payment from ${req.body.payer} (${req.user?.email})`
+        };
+        const [newRequest, updateTechBalance, saveIncome] = await Promise.all([
             paymentRepositories.saveTechnicianPayment(req.body),
-            authRepository.updateUser(req.user?._id, { balance: newBalance })
+            authRepository.updateUser(req.user?._id, { balance: newBalance }),
+            paymentRepositories.saveSystemIncomeTracker(incomeData)
         ]);
+
 
         return res.status(httpStatus.CREATED).json({
             status: httpStatus.CREATED,
             message: "Payment request created successfully",
             data: {
                 newRequest,
-                paymentResult
+                paymentResult,
+                saveIncome
             }
         });
 
@@ -121,15 +143,8 @@ const waitForPaymentApproval = async (transactionId: any): Promise<any> => {
 
 const findTechniciansPayments = async (req: Request, res: Response): Promise<any> => {
     try {
-        const techniciansPayments = await paymentRepositories.findTechniciansPayments()
-            ;
 
-        if (!techniciansPayments || techniciansPayments.length === 0) {
-            return res.status(httpStatus.NOT_FOUND).json({
-                status: httpStatus.NOT_FOUND,
-                message: "No payments found."
-            });
-        }
+        const techniciansPayments = await paymentRepositories.findTechniciansPayments()
 
         return res.status(httpStatus.OK).json({
             status: httpStatus.OK,
@@ -167,9 +182,6 @@ const technicianFindOwnPayments = async (req: Request, res: Response): Promise<a
 const technicianWithdrawMoney = async (req: Request, res: Response): Promise<any> => {
     const { amount, phone } = req.body;
     const { balance, _id: technicianId } = req.user || {};
-    const BAD_REQUEST = httpStatus.BAD_REQUEST;
-    const INTERNAL_ERROR = httpStatus.INTERNAL_SERVER_ERROR;
-    const SUCCESS = httpStatus.OK;
 
     try {
         if (!balance) {
@@ -207,15 +219,27 @@ const technicianWithdrawMoney = async (req: Request, res: Response): Promise<any
             newBalance
         };
 
-        const [techWithdrawal, userBalance] = await Promise.all([
+        const serviceFee = amount * Number(TRANSACTION_FEE_RATE);
+
+        const incomeData = {
+            grossAmount: amount,
+            serviceFee,
+            transactionFee: 0,
+            netIncome: serviceFee,
+            type: "out",
+            description: `Withdraw money: ${amount} by ${req.user?.email}`
+        }
+
+        const [techWithdrawal, userBalance, saveIncome] = await Promise.all([
             paymentRepositories.techWithdrawMoney(withdrawData),
-            authRepository.updateUser(technicianId, { balance: newBalance })
+            authRepository.updateUser(technicianId, { balance: newBalance }),
+            paymentRepositories.saveSystemIncomeTracker(incomeData)
         ]);
 
         return res.status(SUCCESS).json({
             status: SUCCESS,
             message: `You have successfully withdrawn ${amount} from your account`,
-            data: { techWithdrawal, userBalance }
+            data: { techWithdrawal, userBalance, saveIncome }
         });
     } catch (error) {
         console.error("Error in technicianWithdrawMoney:", error);
@@ -247,12 +271,12 @@ const technicianFindOwnWithdrawals = async (req: Request, res: Response): Promis
 
 const findTechniciansWithdraws = async (req: Request, res: Response): Promise<any> => {
     try {
-const withdrawals = await paymentRepositories.findAllTechsWithdrawals();
-return res.status(httpStatus.OK).json({
-    status: httpStatus.OK,
-    message: "Withdrawals retrieved successfully",
-    data: { withdrawals }
-})
+        const withdrawals = await paymentRepositories.findAllTechsWithdrawals();
+        return res.status(httpStatus.OK).json({
+            status: httpStatus.OK,
+            message: "Withdrawals retrieved successfully",
+            data: { withdrawals }
+        })
     } catch (error: any) {
         return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
             status: httpStatus.INTERNAL_SERVER_ERROR,
@@ -260,11 +284,105 @@ return res.status(httpStatus.OK).json({
         })
     }
 }
+
+const findSystemIncomes = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const systemIncomes = await paymentRepositories.findAllSystemIncomes();
+
+        return res.status(httpStatus.OK).json({
+            status: httpStatus.OK,
+            message: "System incomes retrieved successfully",
+            data: { systemIncomes }
+        })
+    } catch (error: any) {
+        return res.status(INTERNAL_ERROR).json({
+            status: INTERNAL_ERROR,
+            message: error.message
+        }
+        )
+    }
+}
+
+const findTechniciansBalances = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const techniciansBalances = await paymentRepositories.findAllTechnicians();
+        return res.status(httpStatus.OK).json({
+            status: httpStatus.OK,
+            message: "Technicians retrieved successfully",
+            data: { techniciansBalances }
+        })
+    }
+    catch (error: any) {
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+            status: httpStatus.INTERNAL_SERVER_ERROR,
+            message: error.message
+        })
+    }
+}
+
+const adminWithdrawMoney = async (req: Request, res: Response): Promise<any> => {
+    const { amount, phone } = req.body;
+    const technicianId = req.user?._id;
+    try {
+
+        const paymentResponse = await paypack.cashout({
+            number: phone,
+            amount,
+        });
+
+        console.debug("Initial withdraw response:", paymentResponse.data);
+        const transactionId = paymentResponse.data.ref;
+
+
+        console.info("Withdraw successful! Creating order...");
+        const withdrawData = {
+            ...req.body,
+            withdrawId: transactionId,
+            technician: technicianId,
+            status: "paid",
+            oldBalance: 0,
+            newBalance: 0
+        };
+
+        const serviceFee = amount * Number(TRANSACTION_FEE_RATE);
+
+        const incomeData = {
+            grossAmount: amount,
+            serviceFee,
+            transactionFee: 0,
+            netIncome: serviceFee,
+            type: "out",
+            description: `Withdraw money: ${amount} by Admin ${req.user?.email}`
+        }
+
+        const [techWithdrawal, saveIncome] = await Promise.all([
+            paymentRepositories.techWithdrawMoney(withdrawData),
+            paymentRepositories.saveSystemIncomeTracker(incomeData)
+        ]);
+
+        return res.status(SUCCESS).json({
+            status: SUCCESS,
+            message: `You have successfully withdrawn ${amount} from your account`,
+            data: { techWithdrawal, saveIncome }
+        });
+    } catch (error) {
+        console.error("Error in technicianWithdrawMoney:", error);
+        return res.status(INTERNAL_ERROR).json({
+            status: INTERNAL_ERROR,
+            message: "Internal Server Error"
+        });
+    }
+};
+
+
 export default {
     requestPaypackPayment,
     findTechniciansPayments,
     technicianFindOwnPayments,
     technicianWithdrawMoney,
     technicianFindOwnWithdrawals,
-    findTechniciansWithdraws
+    findTechniciansWithdraws,
+    findSystemIncomes,
+    findTechniciansBalances,
+    adminWithdrawMoney
 }

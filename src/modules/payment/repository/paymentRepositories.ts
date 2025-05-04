@@ -1,5 +1,8 @@
+import AdminWithdrawal from "../../../database/models/adminWithdrawals"
+import SystemIncomeTracker from "../../../database/models/systemIncomeTracker"
 import TechniciansPayments from "../../../database/models/techniciansPayments"
 import TechniciansWithdraws from "../../../database/models/techniciansWithdraws"
+import User from "../../../database/models/user"
 
 const findTechnicianPaymentBy2Attributes = async (data: any) => {
     return await TechniciansPayments.findOne(data)
@@ -44,6 +47,23 @@ const findAllTechsWithdrawals = async () => {
     return await TechniciansWithdraws.find().populate("technician", "firstName lastName email phone profile").sort({ createdAt: 1 })
 }
 
+const saveSystemIncomeTracker = async (data: any) => {
+    return await SystemIncomeTracker.create(data)
+}
+
+const findAllSystemIncomes = async () => {
+    return await SystemIncomeTracker.find().sort({ createdAt: -1 })
+}
+const findAllTechnicians = async () => {
+    return await User.find()
+        .select('_id email balance')
+        .sort({ balance: -1 });
+}
+
+const saveAdminWithdrawals = async (data: any) => {
+    return await AdminWithdrawal.create(data)
+}
+
 export default {
     findTechnicianPaymentBy2Attributes,
     saveTechnicianPayment, updateTechnicianPayment,
@@ -52,5 +72,9 @@ export default {
     findTechnicianPayments,
     techWithdrawMoney,
     techFindOwnWithdrawals,
-    findAllTechsWithdrawals
+    findAllTechsWithdrawals,
+    saveSystemIncomeTracker,
+    findAllSystemIncomes,
+    findAllTechnicians,
+    saveAdminWithdrawals
 }
