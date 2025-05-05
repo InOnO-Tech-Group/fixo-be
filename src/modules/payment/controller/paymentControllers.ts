@@ -61,7 +61,7 @@ const requestPaypackPayment = async (req: Request, res: Response): Promise<any> 
                 message: "Payment not confirmed by user"
             });
         }
-
+        console.error(error)
         const message = error instanceof Error ? error.message : "Unknown error occurred";
         console.error("[ERROR] Order processing failed:", message);
         return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
@@ -149,7 +149,35 @@ const findTechniciansPayments = async (req: Request, res: Response): Promise<any
     }
 }
 
+const technicianFindOwnPayments = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const technicianId = req.user?._id;
+        const technicianPayments = await paymentRepositories.findTechnicianPayments(technicianId);
+
+        if (!technicianPayments || technicianPayments.length === 0) {
+            return res.status(httpStatus.NOT_FOUND).json({
+                status: httpStatus.NOT_FOUND,
+                message: "No payments found."
+            });
+        }
+
+        return res.status(httpStatus.OK).json({
+            status: httpStatus.OK,
+            message: "Payments retrieved successfully",
+            data: { technicianPayments }
+        });
+    } catch (error) {
+        console.error("Error in findTechnicianPayments:", error);
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+            status: httpStatus.INTERNAL_SERVER_ERROR,
+            message: "Internal Server Error"
+        });
+    }
+}
+
+
 export default {
     requestPaypackPayment,
-    findTechniciansPayments
+    findTechniciansPayments,
+    technicianFindOwnPayments
 }

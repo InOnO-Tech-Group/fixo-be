@@ -24,9 +24,17 @@ const findTechniciansPayments = async () => {
         )
 }
 
+const findTechnicianPayments = async (technicianId: any) => {
+    return await TechniciansPayments.find({ technician: technicianId })
+        .populate("technician", "firstName lastName email phone profile").sort(
+            { createdAt: -1 }
+        )
+}
+
 export default {
     findTechnicianPaymentBy2Attributes,
-    saveTechnicianPayment,    updateTechnicianPayment,
+    saveTechnicianPayment, updateTechnicianPayment,
     findTechnicianPaymentByDepositId,
-    findTechniciansPayments
+    findTechniciansPayments,
+    findTechnicianPayments
 }

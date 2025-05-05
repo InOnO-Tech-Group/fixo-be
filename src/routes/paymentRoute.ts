@@ -9,5 +9,6 @@ const paymentRoute = express.Router();
 
 paymentRoute.post("/request-payment", isUserAuthorized(["technician", "admin"]), bodyValidation(requestPaymentValidation), paymentControllers.requestPaypackPayment);
 paymentRoute.get("/get-all-tech-payments", isUserAuthorized(["admin"]), paymentControllers.findTechniciansPayments)
+paymentRoute.get("/get-tech-payments", isUserAuthorized(["technician"]), paymentControllers.technicianFindOwnPayments)
 
 export default paymentRoute;
