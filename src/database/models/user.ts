@@ -13,6 +13,7 @@ export interface IUser extends Document {
   status?: boolean;
   socketId?: string;
   profile?: string;
+  balance?: number;
 }
 declare global {
   namespace Express {
@@ -58,7 +59,6 @@ const userSchema: Schema = new mongoose.Schema(
     phone: {
       type: String,
       required: false,
-      unique: true,
     },
     status: {
       type: Boolean,
@@ -72,6 +72,10 @@ const userSchema: Schema = new mongoose.Schema(
       type: String,
       default: null,
       required: false
+    },
+    balance: {
+      type: Number,
+      default: 0,
     }
   },
   {
