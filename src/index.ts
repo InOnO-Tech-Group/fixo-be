@@ -7,7 +7,6 @@ import { Request, Response } from "express";
 import dbConnection from "./database/config/config";
 import router from "./routes";
 import { setupSocket } from "./services/socketService";
-import { setupWebRTCHandlers } from "./services/webrtcSocketService";
 
 dotenv.config();
 
@@ -33,8 +32,6 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 const io = setupSocket(server);
-// Add WebRTC handlers to the same io instance
-setupWebRTCHandlers(io);
 
 const PORT = process.env.PORT || 3000;
 
