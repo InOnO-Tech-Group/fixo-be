@@ -16,7 +16,6 @@ const requestPaypackPayment = async (req: Request, res: Response): Promise<any> 
         const paymentResponse: any = await paypack.cashin({
             number: req.body.payer,
             amount: req.body.amount,
-            environment: PAYPACK_ENVIRONMENT
         });
 
         console.log("[DEBUG] Initial payment response:", paymentResponse.data);
@@ -32,12 +31,17 @@ const requestPaypackPayment = async (req: Request, res: Response): Promise<any> 
         }
 
         console.log("[INFO] Payment successful! Creating order...");
+
+
         req.body.depositId = transactionId;
         req.body.technician = req.user?._id;
         req.body.status = "paid";
+        req.body.serviceFee = 0.4
+        req.body.requestedAmount = req.body.amount;
+        req.body.receivedAmount = req.body.amount * (1 - req.body.serviceFee);
 
         const techCurrentBalance = req.user?.balance || 0;
-        const newBalance = techCurrentBalance + req.body.amount;
+        const newBalance = techCurrentBalance + req.body.receivedAmount;
 
         const [newRequest, updateTechBalance] = await Promise.all([
             paymentRepositories.saveTechnicianPayment(req.body),
@@ -71,57 +75,49 @@ const requestPaypackPayment = async (req: Request, res: Response): Promise<any> 
     }
 };
 
-const waitForPaymentApproval = async (transactionId: string): Promise<{ success: boolean }> => {
+const waitForPaymentApproval = async (transactionId: any): Promise<any> => {
     const maxWaitTime = 60000;
-    const checkInterval = 5000;
+    const checkInterval = 15000;
 
     return new Promise((resolve, reject) => {
         const startTime = Date.now();
-        console.log(`[INFO] Starting payment confirmation check for: ${transactionId}`);
+        console.log(`[INFO] Checking payment status every ${checkInterval / 1000} seconds for transaction: ${transactionId}`);
 
         const interval = setInterval(async () => {
             try {
                 const elapsedTime = Date.now() - startTime;
+                console.log(`[INFO] Checking Paypack transactions for transaction: ${transactionId}...`);
 
-                const response = await paypack.events({
-                    offset: 0,
-                    limit: 100,
-                    after: startTime
-                });
+                const response = await paypack.events({ offset: 0, limit: 100 });
+                const events = response.data.transactions;
 
-                console.log("[DEBUG] Raw Paypack events:", response.data.transactions);
-
-                const confirmedTransaction = response.data.transactions.find(
+                const transactionEvent = events.find(
                     (event: any) =>
                         event.data.ref === transactionId &&
-                        event.event_kind === "transaction:confirmed" &&
-                        event.data.status === "successful"
+                        event.event_kind === "transaction:processed"
                 );
 
-                if (confirmedTransaction) {
-                    console.log(`[SUCCESS] User confirmed payment: ${transactionId}`);
+                if (transactionEvent) {
+                    console.log(`[SUCCESS] Payment confirmed for transaction: ${transactionId}`);
                     clearInterval(interval);
-                    resolve({ success: true });
+                    resolve({ success: true, transactionId });
                     return;
                 }
 
                 if (elapsedTime >= maxWaitTime) {
+                    console.log(`[ERROR] Payment timeout: No approval for transaction: ${transactionId}`);
                     clearInterval(interval);
-                    throw new PaymentTimeoutError(`Timeout waiting for confirmation: ${transactionId}`);
+                    reject({ success: false, message: "Payment timeout: User did not approve within 1 minute" });
                 }
-
             } catch (error) {
+                console.error(`[ERROR] Failed to check payment status for transaction: ${transactionId}`, error);
                 clearInterval(interval);
-                if (error instanceof PaymentTimeoutError) {
-                    reject(error);
-                } else {
-                    console.error(`[ERROR] Payment check failed: ${transactionId}`, error);
-                    reject(new Error("Payment verification failed"));
-                }
+                reject({ success: false, message: "Payment check failed" });
             }
         }, checkInterval);
     });
 };
+
 
 const findTechniciansPayments = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -154,13 +150,6 @@ const technicianFindOwnPayments = async (req: Request, res: Response): Promise<a
         const technicianId = req.user?._id;
         const technicianPayments = await paymentRepositories.findTechnicianPayments(technicianId);
 
-        if (!technicianPayments || technicianPayments.length === 0) {
-            return res.status(httpStatus.NOT_FOUND).json({
-                status: httpStatus.NOT_FOUND,
-                message: "No payments found."
-            });
-        }
-
         return res.status(httpStatus.OK).json({
             status: httpStatus.OK,
             message: "Payments retrieved successfully",
@@ -175,9 +164,107 @@ const technicianFindOwnPayments = async (req: Request, res: Response): Promise<a
     }
 }
 
+const technicianWithdrawMoney = async (req: Request, res: Response): Promise<any> => {
+    const { amount, phone } = req.body;
+    const { balance, _id: technicianId } = req.user || {};
+    const BAD_REQUEST = httpStatus.BAD_REQUEST;
+    const INTERNAL_ERROR = httpStatus.INTERNAL_SERVER_ERROR;
+    const SUCCESS = httpStatus.OK;
 
+    try {
+        if (!balance) {
+            return res.status(BAD_REQUEST).json({
+                status: BAD_REQUEST,
+                message: "User balance Insufficient"
+            });
+        }
+
+        if (balance < amount) {
+            return res.status(BAD_REQUEST).json({
+                status: BAD_REQUEST,
+                message: "Insufficient balance, make sure the withdraw amount is less than your balance"
+            });
+        }
+
+        const paymentResponse = await paypack.cashout({
+            number: phone,
+            amount,
+            environment: PAYPACK_ENVIRONMENT
+        });
+
+        console.debug("Initial withdraw response:", paymentResponse.data);
+        const transactionId = paymentResponse.data.ref;
+
+
+        console.info("Withdraw successful! Creating order...");
+        const newBalance = balance - amount;
+        const withdrawData = {
+            ...req.body,
+            withdrawId: transactionId,
+            technician: technicianId,
+            status: "paid",
+            oldBalance: balance,
+            newBalance
+        };
+
+        const [techWithdrawal, userBalance] = await Promise.all([
+            paymentRepositories.techWithdrawMoney(withdrawData),
+            authRepository.updateUser(technicianId, { balance: newBalance })
+        ]);
+
+        return res.status(SUCCESS).json({
+            status: SUCCESS,
+            message: `You have successfully withdrawn ${amount} from your account`,
+            data: { techWithdrawal, userBalance }
+        });
+    } catch (error) {
+        console.error("Error in technicianWithdrawMoney:", error);
+        return res.status(INTERNAL_ERROR).json({
+            status: INTERNAL_ERROR,
+            message: "Internal Server Error"
+        });
+    }
+};
+
+const technicianFindOwnWithdrawals = async (req: Request, res: Response): Promise<any> => {
+    try {
+        console.log(req.user?._id)
+        const withdrawals = await paymentRepositories.techFindOwnWithdrawals(req.user?._id);
+
+        return res.status(httpStatus.OK).json({
+            status: httpStatus.OK,
+            message: "Withdrawals retrieved successfully",
+            data: { withdrawals }
+        })
+    }
+    catch (error: any) {
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+            status: httpStatus.INTERNAL_SERVER_ERROR,
+            message: error.message || "An unknown error ocured"
+        })
+    }
+}
+
+const findTechniciansWithdraws = async (req: Request, res: Response): Promise<any> => {
+    try {
+const withdrawals = await paymentRepositories.findAllTechsWithdrawals();
+return res.status(httpStatus.OK).json({
+    status: httpStatus.OK,
+    message: "Withdrawals retrieved successfully",
+    data: { withdrawals }
+})
+    } catch (error: any) {
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+            status: httpStatus.INTERNAL_SERVER_ERROR,
+            message: error.message
+        })
+    }
+}
 export default {
     requestPaypackPayment,
     findTechniciansPayments,
-    technicianFindOwnPayments
+    technicianFindOwnPayments,
+    technicianWithdrawMoney,
+    technicianFindOwnWithdrawals,
+    findTechniciansWithdraws
 }

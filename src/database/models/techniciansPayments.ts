@@ -4,7 +4,9 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface ITechniciansPayments extends Document {
     depositId: string;
     technician: mongoose.Types.ObjectId;
-    amount: number;
+    requestedAmount: number;
+    receivedAmount: number;
+    serviceFee: number;
     payer: string;
     note: string;
     status: 'pending' | 'paid' | 'failed';
@@ -32,7 +34,15 @@ const techniciansPaymentsSchema: Schema = new mongoose.Schema(
             ref: "users",
             required: true,
         },
-        amount: {
+        receivedAmount: {
+            type: Number,
+            required: true,
+        },
+        requestedAmount: {
+            type: Number,
+            required: true,
+        },
+        serviceFee: {
             type: Number,
             required: true,
         },

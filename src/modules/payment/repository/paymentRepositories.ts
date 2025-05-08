@@ -1,4 +1,5 @@
 import TechniciansPayments from "../../../database/models/techniciansPayments"
+import TechniciansWithdraws from "../../../database/models/techniciansWithdraws"
 
 const findTechnicianPaymentBy2Attributes = async (data: any) => {
     return await TechniciansPayments.findOne(data)
@@ -31,10 +32,25 @@ const findTechnicianPayments = async (technicianId: any) => {
         )
 }
 
+const techWithdrawMoney = async (data: any) => {
+    return await TechniciansWithdraws.create(data)
+}
+
+const techFindOwnWithdrawals = async (technician: any) => {
+    return await TechniciansWithdraws.find({ technician })
+}
+
+const findAllTechsWithdrawals = async () => {
+    return await TechniciansWithdraws.find().populate("technician", "firstName lastName email phone profile").sort({ createdAt: 1 })
+}
+
 export default {
     findTechnicianPaymentBy2Attributes,
     saveTechnicianPayment, updateTechnicianPayment,
     findTechnicianPaymentByDepositId,
     findTechniciansPayments,
-    findTechnicianPayments
+    findTechnicianPayments,
+    techWithdrawMoney,
+    techFindOwnWithdrawals,
+    findAllTechsWithdrawals
 }

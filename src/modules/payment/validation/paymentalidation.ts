@@ -17,3 +17,22 @@ export const requestPaymentValidation = Joi.object({
         "string.empty": "Note cannot be empty",
     })
 })
+
+export const techWithdrawValidation = Joi.object({
+    amount: Joi.number().required().messages({
+        "number.base": "Amount must be a number",
+        "any.required": "Amount is required",
+        "number.empty": "Amount cannot be empty",
+        "number.min": "Amount must be greater than 0",
+    }),
+    phone: Joi.string().required().messages({
+        "string.base": "Phone must be a string",
+        "any.required": "Phone is required",
+        "string.empty": "Phone cannot be empty",
+    }),
+    password: Joi.string().required().messages({
+        "string.base": "Password must be a string",
+        "any.required": "Password is required",
+        "string.empty": "Password cannot be empty",
+    })
+})
