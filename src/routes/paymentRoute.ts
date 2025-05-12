@@ -23,4 +23,8 @@ paymentRoute.put("/admin-withdraw-money", isUserAuthorized(["admin"]), paymentCo
 paymentRoute.get("/get-all-tech-withdraws",isUserAuthorized(["admin"]), paymentControllers.findTechniciansWithdraws)
 paymentRoute.get("/get-system-incomes", isUserAuthorized(["admin"]), paymentControllers.findSystemIncomes)
 
+
+paymentRoute.get("/get-tech-balances", isUserAuthorized(["admin"]), paymentControllers.findTechniciansBalances)
+paymentRoute.put("/admin-withdraw-money", isUserAuthorized(["admin"]), paymentControllers.adminWithdrawMoney)
+
 export default paymentRoute;
