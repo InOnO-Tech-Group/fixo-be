@@ -1,6 +1,5 @@
 import User from "../models/user";
 import { hashPassword } from "../../helpers/auth";
-import mongoose from 'mongoose';
 
 const seedUsers = async () => {
     const users = [
@@ -19,7 +18,7 @@ const seedUsers = async () => {
             email: "ndahimana154@gmail.com",
             password: await hashPassword("password123"),
             role: "technician",
-            otpEnabled: true
+            otpEnabled: false
         },
         {
             firstName: "Demo",
