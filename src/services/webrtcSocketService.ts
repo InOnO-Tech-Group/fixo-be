@@ -120,7 +120,10 @@ export const setupWebRTCHandlers = (io: Server) => {
       const technicianId = activeCalls.get(userId);
       
       if (userSocketId) {
-        io.to(userSocketId).emit('supportEnded');
+        console.log("available req",supportRequests.size);
+        supportRequests.delete(userId);
+        
+        io.emit('supportEnded',{userId});
       }
       
       if (technicianId) {
