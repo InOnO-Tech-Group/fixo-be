@@ -117,21 +117,16 @@ export const setupWebRTCHandlers = (io: Server) => {
     socket.on('cancelRequest', ({ userId }) => {
       console.log(`Support request for user ${userId} canceled` );
     });
-    // End support call
     socket.on('endSupport', ({ userId }) => {
-      console.log(`Support call ended for user ${userId}`);
       io.emit('requestCanceled', { userId });
       
-      // Get relevant socket IDs and connection info
       const userSocketId = userSocketMap.get(userId);
       const technicianId = activeCalls.get(userId);
-      
-      // Notify the specific user that support has ended
+
       if (userSocketId) {
         io.to(userSocketId).emit('supportEnded', { userId });
       }
       
-      // Notify the specific technician that support has ended
       if (technicianId) {
         const techSocketId = techSocketMap.get(technicianId);
         if (techSocketId) {
@@ -139,22 +134,18 @@ export const setupWebRTCHandlers = (io: Server) => {
         }
       }
 
-      // Clean up data structures
       supportRequests.delete(userId);
       activeCalls.delete(userId);
     });
 
-    // Handle disconnections
     socket.on('disconnect', () => {
       console.log(`Socket disconnected: ${socket.id}`);
       
-      // Handle user disconnection
       for (const [userId, socketId] of userSocketMap.entries()) {
         if (socketId === socket.id) {
           supportRequests.delete(userId);
           userSocketMap.delete(userId);
           
-          // If in active call, notify technician
           const technicianId = activeCalls.get(userId);
           if (technicianId) {
             const techSocketId = techSocketMap.get(technicianId);
@@ -169,13 +160,11 @@ export const setupWebRTCHandlers = (io: Server) => {
         }
       }
       
-      // Handle technician disconnection
       for (const [techId, socketId] of techSocketMap.entries()) {
         if (socketId === socket.id) {
           technicians.delete(techId);
           techSocketMap.delete(techId);
           
-          // For all active calls with this technician, notify users
           const impactedUsers: string[] = [];
           
           for (const [userId, technicianId] of activeCalls.entries()) {
@@ -188,7 +177,6 @@ export const setupWebRTCHandlers = (io: Server) => {
             }
           }
           
-          // Clean up active calls
           impactedUsers.forEach(userId => activeCalls.delete(userId));
           
           console.log(`Technician ${techId} disconnected`);
