@@ -36,3 +36,16 @@ export const techWithdrawValidation = Joi.object({
         "string.empty": "Password cannot be empty",
     })
 })
+
+export const savePaymentSettingsSchema = Joi.object({
+    serviceFee: Joi.number().required().messages({
+        "number.base": "Service fee must be a number",
+        "any.required": "Service fee is required",
+        "number.empty": "Service fee cannot be empty",
+    }),
+    transactionFeeRate: Joi.number().required().messages({
+        "number.base": "Transaction fee rate must be a number",
+        "any.required": "Transaction fee rate is required",
+        "number.empty": "Transaction fee rate cannot be empty",
+    })
+})
