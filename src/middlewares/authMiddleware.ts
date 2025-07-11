@@ -70,7 +70,7 @@ export const isUserPasswordValid = async (
     if (!isPasswordMatch) {
       res.status(httpStatus.UNAUTHORIZED).json({
         status: httpStatus.UNAUTHORIZED,
-        message: "Incorrect Password",
+        message: "Password is incorrect!",
       });
       return;
     }

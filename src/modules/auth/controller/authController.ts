@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { generateToken } from "../../../helpers/auth";
+import { generateToken, hashPassword } from "../../../helpers/auth";
 import httpStatus from "http-status";
 import authRepository from "../repository/authRepository";
 import { ExtendedRequest } from "../../../types/auth";
@@ -47,17 +47,41 @@ const userUpdateProfile = async (req: ExtendedRequest, res: Response): Promise<a
     res.status(httpStatus.INTERNAL_SERVER_ERROR).json({ message: error.message, status: httpStatus.INTERNAL_SERVER_ERROR })
   }
 }
-
 const uploadProfilePicture = async (req: ExtendedRequest, res: Response): Promise<any> => {
   try {
     const profile = authRepository.updateUser(req.user?._id, { profile: req.body.profile });
+
+    return res.status(httpStatus.OK).json({
+      status: httpStatus.OK,
+      message: "Profile picture updated successfully",
+      data: profile,
+    })
   } catch (error: any) {
     res.status(httpStatus.INTERNAL_SERVER_ERROR).json({ message: error.message, status: httpStatus.INTERNAL_SERVER_ERROR })
   }
 }
+const userUpdatePassword = async (req: ExtendedRequest, res: Response): Promise<any> => {
+  try {
+    const hashedPassword = await hashPassword(req.body.newPassword);
+
+    const updatedUser = await authRepository.updateUser(req.user?._id, { password: hashedPassword });
+
+    return res.status(httpStatus.OK).json({
+      status: httpStatus.OK,
+      message: "Password updated successfully",
+      data: updatedUser,
+    })
+  } catch (error: any) {
+    console.log(error)
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({ message: error.message, status: httpStatus.INTERNAL_SERVER_ERROR })
+  }
+}
+
 
 export default {
   userLogin,
   userViewProfile,
-  userUpdateProfile
+  userUpdateProfile,
+  uploadProfilePicture,
+  userUpdatePassword
 };
