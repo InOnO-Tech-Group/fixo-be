@@ -24,3 +24,8 @@ export const updateProfileSchema = Joi.object({
 export const uploadProfileIMage = Joi.object({
     profile: Joi.string().required()
 })
+
+export const updatePasswordSchema = Joi.object({
+    password: Joi.string().required(),
+    newPassword: Joi.string().required()
+})
