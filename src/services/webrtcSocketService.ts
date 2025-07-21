@@ -24,21 +24,33 @@ export const setupWebRTCHandlers = (io: Server) => {
   io.on('connection', (socket) => {
     console.log('New socket connection:', socket.id);
     
-    socket.on('requestSupport', ({ userId, username }) => {
+    socket.on('requestSupport', ({ userId, username, techId }) => {
       console.log(`User ${username} (${userId}) requested support`);
-      
+    
       const request: SupportRequest = {
         userId,
         username,
         timestamp: Date.now()
       };
-      
+    
       supportRequests.set(userId, request);
       userSocketMap.set(userId, socket.id);
-      for (const [_, technician] of technicians) {
-        io.to(technician.socketId).emit('newSupportRequest', request);
+    
+      if (techId) {
+        const technician = technicians.get(techId);
+        if (technician) {
+          io.to(technician.socketId).emit('newSupportRequest', request);
+        } else {
+          console.log(`Technician with ID ${techId} not found`);
+          socket.emit('supportError', { message: 'Technician not available' });
+        }
+      } else {
+        for (const [_, technician] of technicians) {
+          io.to(technician.socketId).emit('newSupportRequest', request);
+        }
       }
     });
+    
 
       socket.on('technicianOnline', ({ technicianId, technicianName }) => {
       console.log(`Technician ${technicianName} (${technicianId}) is online`);
