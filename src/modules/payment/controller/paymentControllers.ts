@@ -52,74 +52,82 @@ class PaymentTimeoutError extends Error {
     }
 }
 
+
 const requestPaypackPayment = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { payer, amount } = req.body;
 
-        // Step 1: Initiate payment
-        const paymentResponse = await paypack.cashin({ number: payer, amount });
+        console.log("[DEBUG] Request body:", req.body);
+        const paymentResponse: any = await paypack.cashin({
+            number: req.body.payer,
+            amount: req.body.amount,
+        });
+
+        console.log("[DEBUG] Initial payment response:", paymentResponse.data);
         const transactionId = paymentResponse.data.ref;
 
-        console.log("[INFO] Payment initiated. Waiting for confirmation...");
-
-        // Step 2: Wait for confirmation
-        const paymentResult = await waitForPaymentApproval(transactionId, amount);
+        const paymentResult = await waitForPaymentApproval(transactionId);
 
         if (!paymentResult.success) {
             return res.status(httpStatus.BAD_REQUEST).json({
                 status: httpStatus.BAD_REQUEST,
-                message: paymentResult.message || "Payment failed or timed out"
+                message: "Payment failed or timed out"
             });
         }
 
-        console.log("[INFO] Payment successful. Proceeding to save transaction...");
+        console.log("[INFO] Payment successful! Creating order...");
 
-        // Step 3: Save payment info
+
         req.body.depositId = transactionId;
         req.body.technician = req.user?._id;
         req.body.status = "paid";
-        req.body.serviceFee = SERVICE_FEE;
-        req.body.requestedAmount = amount;
-        req.body.receivedAmount = amount * (1 - Number(SERVICE_FEE));
+        req.body.serviceFee = SERVICE_FEE
+        req.body.requestedAmount = req.body.amount;
+        req.body.receivedAmount = req.body.amount * (1 - Number(SERVICE_FEE));
 
         const techCurrentBalance = req.user?.balance || 0;
+
         const newBalance = techCurrentBalance + req.body.receivedAmount;
 
-        const serviceFeeAmount = amount * Number(SERVICE_FEE);
-        const transactionFee = amount * Number(TRANSACTION_FEE_RATE);
-        const netIncome = serviceFeeAmount - transactionFee;
+        const serviceFee = req.body.amount * req.body.serviceFee;
+        const transactionFee = req.body.amount * Number(TRANSACTION_FEE_RATE)
+        const netIncome = serviceFee - transactionFee;
 
         const incomeData = {
-            grossAmount: amount,
-            serviceFee: serviceFeeAmount,
+            grossAmount: req.body.amount,
+            serviceFee: serviceFee,
             transactionFee: transactionFee,
             netIncome: netIncome,
             type: "in",
-            description: `Payment from ${payer} (${req.user?.email})`
+            description: `Payment from ${req.body.payer} (${req.user?.email})`
         };
-
         const [newRequest, updateTechBalance, saveIncome] = await Promise.all([
             paymentRepositories.saveTechnicianPayment(req.body),
             authRepository.updateUser(req.user?._id, { balance: newBalance }),
             paymentRepositories.saveSystemIncomeTracker(incomeData)
         ]);
 
+
         return res.status(httpStatus.CREATED).json({
             status: httpStatus.CREATED,
             message: "Payment request created successfully",
-            data: { newRequest, paymentResult, saveIncome }
+            data: {
+                newRequest,
+                paymentResult,
+                saveIncome
+            }
         });
 
     } catch (error: any) {
-        console.error("[ERROR] Payment processing failed:", error);
-
         if (error instanceof PaymentTimeoutError) {
+            console.log(`[TIMEOUT] Payment not confirmed: ${error.message}`);
             return res.status(httpStatus.BAD_REQUEST).json({
                 status: httpStatus.BAD_REQUEST,
-                message: error.message || "Payment timeout"
+                message: "Payment not confirmed by user"
             });
         }
-
+        console.error(error)
+        const message = error instanceof Error ? error.message : "Unknown error occurred";
+        console.error("[ERROR] Order processing failed:", message);
         return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
             status: httpStatus.INTERNAL_SERVER_ERROR,
             message: "Internal server error"
@@ -128,49 +136,50 @@ const requestPaypackPayment = async (req: Request, res: Response): Promise<any> 
 };
 
 
-const waitForPaymentApproval = async (transactionId: string, amount: number): Promise<{ success: boolean; message?: string }> => {
-    const maxWaitTime = 60000; // 60 seconds
-    const checkInterval = 10000; // 10 seconds
+
+
+const waitForPaymentApproval = async (transactionId: any): Promise<any> => {
+    const maxWaitTime = 60000;
+    const checkInterval = 60000;
 
     return new Promise((resolve, reject) => {
         const startTime = Date.now();
+        console.log(`[INFO] Checking payment status every ${checkInterval / 5000} seconds for transaction: ${transactionId}`);
 
         const interval = setInterval(async () => {
             try {
-                const elapsed = Date.now() - startTime;
+                const elapsedTime = Date.now() - startTime;
+                console.log(`[INFO] Checking Paypack transactions for transaction: ${transactionId}...`);
 
-                // Fetch recent Paypack events
                 const response = await paypack.events({ offset: 0, limit: 100 });
-                const transactions = response.data.transactions;
+                const events = response.data.transactions;
 
-                // Look for the correct transaction
-                const matchedTransaction = transactions.find(
+                const transactionEvent = events.find(
                     (event: any) =>
-                        event.data?.ref === transactionId &&
-                        event.event_kind === "transaction:processed" &&
-                        event.data?.status === "success" &&
-                        Number(event.data?.amount) === Number(amount)
+                        event.data.ref === transactionId &&
+                        event.event_kind === "transaction:processed"
                 );
 
-                if (matchedTransaction) {
+                if (transactionEvent) {
+                    console.log(`[SUCCESS] Payment confirmed for transaction: ${transactionId}`);
                     clearInterval(interval);
-                    console.log("[SUCCESS] Confirmed payment from Paypack:", matchedTransaction);
-                    resolve({ success: true });
-                } else if (elapsed >= maxWaitTime) {
-                    clearInterval(interval);
-                    console.warn(`[TIMEOUT] Payment not confirmed for transaction: ${transactionId}`);
-                    reject(new PaymentTimeoutError("Payment not confirmed by user within 60 seconds"));
+                    resolve({ success: true, transactionId });
+                    return;
                 }
-            } catch (err) {
+
+                if (elapsedTime >= maxWaitTime) {
+                    console.log(`[ERROR] Payment timeout: No approval for transaction: ${transactionId}`);
+                    clearInterval(interval);
+                    reject({ success: false, message: "Payment timeout: User did not approve within 1 minute" });
+                }
+            } catch (error) {
+                console.error(`[ERROR] Failed to check payment status for transaction: ${transactionId}`, error);
                 clearInterval(interval);
-                console.error("[ERROR] Failed to fetch transaction events:", err);
-                reject({ success: false, message: "Failed to verify payment status" });
+                reject({ success: false, message: "Payment check failed" });
             }
         }, checkInterval);
     });
 };
-
-
 
 const findTechniciansPayments = async (req: Request, res: Response): Promise<any> => {
     try {
