@@ -1,4 +1,5 @@
 import AdminWithdrawal from "../../../database/models/adminWithdrawals"
+import PaymentSettings from "../../../database/models/paymentSettings"
 import SystemIncomeTracker from "../../../database/models/systemIncomeTracker"
 import TechniciansPayments from "../../../database/models/techniciansPayments"
 import TechniciansWithdraws from "../../../database/models/techniciansWithdraws"
@@ -64,6 +65,22 @@ const saveAdminWithdrawals = async (data: any) => {
     return await AdminWithdrawal.create(data)
 }
 
+const savePaymentSettings = async (data: any) => {
+    return await PaymentSettings.create(data)
+}
+
+const findPaymentSettings = async () => {
+    return await PaymentSettings.find().sort({
+        createdAt: -1
+    })
+}
+
+const findLatestSetting = async () => {
+    return await PaymentSettings.findOne().sort({
+        createdAt: -1
+    })
+}
+
 export default {
     findTechnicianPaymentBy2Attributes,
     saveTechnicianPayment, updateTechnicianPayment,
@@ -76,5 +93,8 @@ export default {
     saveSystemIncomeTracker,
     findAllSystemIncomes,
     findAllTechnicians,
-    saveAdminWithdrawals
+    saveAdminWithdrawals,
+    savePaymentSettings,
+    findPaymentSettings,
+    findLatestSetting
 }

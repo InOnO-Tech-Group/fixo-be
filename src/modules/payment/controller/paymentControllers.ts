@@ -4,11 +4,46 @@ import paymentRepositories from '../repository/paymentRepositories';
 import { paypack, PAYPACK_ENVIRONMENT } from '../../../services/paypackService';
 import authRepository from '../../auth/repository/authRepository';
 
+
+
 const BAD_REQUEST = httpStatus.BAD_REQUEST;
 const INTERNAL_ERROR = httpStatus.INTERNAL_SERVER_ERROR;
 const SUCCESS = httpStatus.OK;
-const SERVICE_FEE = process.env.SERVICE_FEE || 0.4;
-const TRANSACTION_FEE_RATE = process.env.TRANSACTION_FEE || 0.023;
+
+const getTheLatestSettings = async (): Promise<any> => {
+    try {
+        const setting = await paymentRepositories.findLatestSetting();
+
+        const serviceFee =
+            setting?.serviceFee ?? Number(process.env.SERVICE_FEE || 0.4);
+        const transactionFeeRate =
+            setting?.transactionFeeRate ?? Number(process.env.TRANSACTION_FEE || 0.023);
+
+        return { serviceFee, transactionFeeRate };
+    } catch (error) {
+        console.error('Failed to get settings:', error);
+        return {
+            serviceFee: Number(process.env.SERVICE_FEE || 0.4),
+            transactionFeeRate: Number(process.env.TRANSACTION_FEE || 0.023),
+        };
+    }
+};
+
+let SERVICE_FEE: any;
+let TRANSACTION_FEE_RATE: any;
+
+const initPaymentSettings = async () => {
+    const settings = await getTheLatestSettings();
+    SERVICE_FEE = settings.serviceFee / 100;
+    TRANSACTION_FEE_RATE = settings.transactionFeeRate / 100;
+};
+
+
+initPaymentSettings();
+
+
+
+
 
 class PaymentTimeoutError extends Error {
     constructor(message: string) {
@@ -17,8 +52,11 @@ class PaymentTimeoutError extends Error {
     }
 }
 
+
 const requestPaypackPayment = async (req: Request, res: Response): Promise<any> => {
     try {
+
+        console.log("[DEBUG] Request body:", req.body);
         const paymentResponse: any = await paypack.cashin({
             number: req.body.payer,
             amount: req.body.amount,
@@ -97,13 +135,16 @@ const requestPaypackPayment = async (req: Request, res: Response): Promise<any> 
     }
 };
 
+
+
+
 const waitForPaymentApproval = async (transactionId: any): Promise<any> => {
     const maxWaitTime = 60000;
-    const checkInterval = 15000;
+    const checkInterval = 60000;
 
     return new Promise((resolve, reject) => {
         const startTime = Date.now();
-        console.log(`[INFO] Checking payment status every ${checkInterval / 1000} seconds for transaction: ${transactionId}`);
+        console.log(`[INFO] Checking payment status every ${checkInterval / 5000} seconds for transaction: ${transactionId}`);
 
         const interval = setInterval(async () => {
             try {
@@ -139,7 +180,6 @@ const waitForPaymentApproval = async (transactionId: any): Promise<any> => {
         }, checkInterval);
     });
 };
-
 
 const findTechniciansPayments = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -374,6 +414,36 @@ const adminWithdrawMoney = async (req: Request, res: Response): Promise<any> => 
     }
 };
 
+const savePaymentSettings = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const settings = await paymentRepositories.savePaymentSettings(req.body);
+        return res.status(SUCCESS).json({
+            status: SUCCESS,
+            message: "Payment settings saved successfully",
+            data: { settings }
+        })
+    } catch (error) {
+        console.error("Error in savePaymentSettings:", error);
+        return res.status(INTERNAL_ERROR).json({
+            status: INTERNAL_ERROR,
+            message: "Internal Server Error" + error
+        }
+        )
+    }
+}
+
+const getPaymentSettings = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const settings = await paymentRepositories.findPaymentSettings();
+        return res.status(SUCCESS).json({
+            status: SUCCESS,
+            message: "Payment settings retrieved successfully",
+            data: { settings }
+        })
+    } catch (error) {
+        console.error("Error in getPaymentSettings:", error);
+    }
+}
 
 export default {
     requestPaypackPayment,
@@ -384,5 +454,7 @@ export default {
     findTechniciansWithdraws,
     findSystemIncomes,
     findTechniciansBalances,
-    adminWithdrawMoney
+    adminWithdrawMoney,
+    savePaymentSettings,
+    getPaymentSettings
 }
