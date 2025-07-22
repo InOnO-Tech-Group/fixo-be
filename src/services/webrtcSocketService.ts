@@ -1,12 +1,14 @@
-
 import { Server } from 'socket.io';
 import { Server as HttpServer } from 'http';
+import callSessionRepository from '../modules/callSession/repository/callSessionRepository';
 
 interface SupportRequest {
   userId: string;
   username: string;
   timestamp: number;
+  techId?: string;
 }
+
 
 interface Technician {
   technicianId: string;
@@ -19,6 +21,9 @@ const technicians: Map<string, Technician> = new Map();
 const userSocketMap: Map<string, string> = new Map();
 const techSocketMap: Map<string, string> = new Map();
 const activeCalls: Map<string, string> = new Map(); 
+const sessionStartMap: Map<string, number> = new Map();
+const endedSessions: Set<string> = new Set(); 
+
 
 export const setupWebRTCHandlers = (io: Server) => {
   io.on('connection', (socket) => {
@@ -30,44 +35,54 @@ export const setupWebRTCHandlers = (io: Server) => {
       const request: SupportRequest = {
         userId,
         username,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        techId
       };
     
       supportRequests.set(userId, request);
       userSocketMap.set(userId, socket.id);
-    
+      
       if (techId) {
-        const technician = technicians.get(techId);
-        if (technician) {
-          io.to(technician.socketId).emit('newSupportRequest', request);
+        const technicianSocketId = techSocketMap.get(techId);
+        console.log("tech found", technicianSocketId);
+    
+        if (technicianSocketId) {
+          io.to(technicianSocketId).emit('newSupportRequest', request);
+          console.log(`Sent request to technician ${techId}`);
         } else {
-          console.log(`Technician with ID ${techId} not found`);
+          console.log(`Technician with ID ${techId} not found or offline`);
           socket.emit('supportError', { message: 'Technician not available' });
         }
       } else {
-        for (const [_, technician] of technicians) {
+        for (const [techId, technician] of technicians) {
           io.to(technician.socketId).emit('newSupportRequest', request);
         }
+        console.log(`Broadcasted request to all technicians`);
       }
     });
     
-
-      socket.on('technicianOnline', ({ technicianId, technicianName }) => {
+    
+    socket.on('technicianOnline', ({ technicianId, technicianName }) => {
       console.log(`Technician ${technicianName} (${technicianId}) is online`);
-      
+    
       const technicianInfo: Technician = {
         technicianId,
         technicianName,
         socketId: socket.id
       };
-      
+    
       technicians.set(technicianId, technicianInfo);
       techSocketMap.set(technicianId, socket.id);
-
-       for (const [_, request] of supportRequests) {
-        socket.emit('newSupportRequest', request);
+    
+      for (const [_, request] of supportRequests) {
+        if (!request.techId || request.techId === technicianId) {
+          socket.emit('newSupportRequest', request);
+        }
       }
     });
+    
+    
+    
     socket.on('acceptSupport', ({ userId, technicianId, technicianName }) => {
       console.log(`Technician ${technicianName} accepted support for user ${userId}`);
       
@@ -80,7 +95,7 @@ export const setupWebRTCHandlers = (io: Server) => {
         });
         supportRequests.delete(userId);
         activeCalls.set(userId, technicianId);
-        
+        sessionStartMap.set(userId, Date.now()); 
          for (const [techId, technician] of technicians.entries()) {
           if (techId !== technicianId) {
             io.to(technician.socketId).emit('supportRequestAccepted', { userId });
@@ -129,26 +144,58 @@ export const setupWebRTCHandlers = (io: Server) => {
     socket.on('cancelRequest', ({ userId }) => {
       console.log(`Support request for user ${userId} canceled` );
     });
-    socket.on('endSupport', ({ userId }) => {
+    socket.on('endSupport', async ({ userId }) => {
+      if (endedSessions.has(userId)) {
+        console.log(`endSupport already processed for user ${userId}`);
+        return;
+      }
+    
+      endedSessions.add(userId); // Mark this user as processed
+    
       io.emit('requestCanceled', { userId });
-      
+    
       const userSocketId = userSocketMap.get(userId);
       const technicianId = activeCalls.get(userId);
-
+      const startTime = sessionStartMap.get(userId);
+      const endTime = Date.now();
+    
       if (userSocketId) {
         io.to(userSocketId).emit('supportEnded', { userId });
       }
-      
+    
       if (technicianId) {
         const techSocketId = techSocketMap.get(technicianId);
         if (techSocketId) {
           io.to(techSocketId).emit('supportEnded', { userId });
         }
       }
-
+    
+      const durationSeconds = startTime
+        ? Math.floor((endTime - startTime) / 1000)
+        : 0;
+    
+      if (startTime && durationSeconds >= 60 && technicianId) {
+        try {
+          await callSessionRepository.createCallSession({
+            userId,
+            technicianId,
+            startedAt: new Date(startTime),
+            endedAt: new Date(endTime),
+            duration: durationSeconds,
+          });
+          console.log(`Session saved: ${userId} - ${technicianId}`);
+        } catch (err) {
+          console.error('Failed to save session:', err);
+        }
+      }
+    
       supportRequests.delete(userId);
       activeCalls.delete(userId);
+      sessionStartMap.delete(userId);
+  
     });
+    
+    
 
     socket.on('disconnect', () => {
       console.log(`Socket disconnected: ${socket.id}`);
