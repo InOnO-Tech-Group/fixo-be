@@ -22,6 +22,7 @@ const userSocketMap: Map<string, string> = new Map();
 const techSocketMap: Map<string, string> = new Map();
 const activeCalls: Map<string, string> = new Map(); 
 const sessionStartMap: Map<string, number> = new Map();
+const endedSessions: Set<string> = new Set(); 
 
 
 export const setupWebRTCHandlers = (io: Server) => {
@@ -144,6 +145,13 @@ export const setupWebRTCHandlers = (io: Server) => {
       console.log(`Support request for user ${userId} canceled` );
     });
     socket.on('endSupport', async ({ userId }) => {
+      if (endedSessions.has(userId)) {
+        console.log(`endSupport already processed for user ${userId}`);
+        return;
+      }
+    
+      endedSessions.add(userId); // Mark this user as processed
+    
       io.emit('requestCanceled', { userId });
     
       const userSocketId = userSocketMap.get(userId);
@@ -162,7 +170,9 @@ export const setupWebRTCHandlers = (io: Server) => {
         }
       }
     
-      const durationSeconds = startTime ? Math.floor((endTime - startTime) / 1000) : 0;
+      const durationSeconds = startTime
+        ? Math.floor((endTime - startTime) / 1000)
+        : 0;
     
       if (startTime && durationSeconds >= 60 && technicianId) {
         try {
@@ -171,18 +181,20 @@ export const setupWebRTCHandlers = (io: Server) => {
             technicianId,
             startedAt: new Date(startTime),
             endedAt: new Date(endTime),
-            duration: durationSeconds
+            duration: durationSeconds,
           });
           console.log(`Session saved: ${userId} - ${technicianId}`);
         } catch (err) {
-          console.error("Failed to save session:", err);
+          console.error('Failed to save session:', err);
         }
       }
     
       supportRequests.delete(userId);
       activeCalls.delete(userId);
       sessionStartMap.delete(userId);
+  
     });
+    
     
 
     socket.on('disconnect', () => {
