@@ -1,6 +1,16 @@
 import { Request, Response } from "express";
 import callSessionRepository from "../repository/callSessionRepository";
 
+const createCallSession = async (req: Request, res: Response) => {
+  try {
+    const data = req.body;
+    const session = await callSessionRepository.createCallSession(data);
+    return res.status(201).json(session);
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to create call session", error });
+  }
+};
+
 const getAllCallSessions = async (req: Request, res: Response) => {
   try {
     const sessions = await callSessionRepository.findAllCallSessions();

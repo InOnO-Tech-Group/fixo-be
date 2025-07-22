@@ -1,6 +1,6 @@
-import CallSession, { ICallSession } from "../../../database/models/callSessions";
+import CallSession, { ICallSession, ICallSessionInput } from "../../../database/models/callSessions";
 
-const createCallSession = async (data: ICallSession) => {
+const createCallSession = async (data: ICallSessionInput) => {
   return await CallSession.create(data);
 };
 

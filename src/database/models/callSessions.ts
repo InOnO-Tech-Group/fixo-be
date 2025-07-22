@@ -6,11 +6,18 @@ export interface ICallSession extends Document {
   technicianId: string;
   startedAt: Date;
   endedAt: Date;
-  duration: number;
-  createdAt: Date;
-  updatedAt: Date;
+  duration?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
-
+export interface ICallSessionInput {
+    userId: string;
+    technicianId: string;
+    startedAt: Date;
+    endedAt: Date;
+    duration?: number;
+  }
+  
 declare global {
   namespace Express {
     interface Request {
