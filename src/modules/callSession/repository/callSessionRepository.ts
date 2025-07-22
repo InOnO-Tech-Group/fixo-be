@@ -8,10 +8,10 @@ const findCallSessionsInRange = async (startDate: Date, endDate: Date) => {
   return await CallSession.find({
     startedAt: { $gte: startDate },
     endedAt: { $lte: endDate },
-  }).populate("technicianId");
+  })
+    .populate("technicianId")
+    .sort({ technicianId: 1 });
 };
-
-
 const findCallSessionById = async (id: string) => {
   return await CallSession.findById(id).populate("technicianId");
 };

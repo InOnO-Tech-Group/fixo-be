@@ -150,7 +150,7 @@ export const setupWebRTCHandlers = (io: Server) => {
         return;
       }
     
-      endedSessions.add(userId); // Mark this user as processed
+      endedSessions.add(userId);
     
       io.emit('requestCanceled', { userId });
     
