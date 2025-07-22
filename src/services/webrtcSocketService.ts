@@ -6,7 +6,9 @@ interface SupportRequest {
   userId: string;
   username: string;
   timestamp: number;
+  techId?: string;
 }
+
 
 interface Technician {
   technicianId: string;
@@ -30,44 +32,54 @@ export const setupWebRTCHandlers = (io: Server) => {
       const request: SupportRequest = {
         userId,
         username,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        techId
       };
     
       supportRequests.set(userId, request);
       userSocketMap.set(userId, socket.id);
-    
+      
       if (techId) {
-        const technician = technicians.get(techId);
-        if (technician) {
-          io.to(technician.socketId).emit('newSupportRequest', request);
+        const technicianSocketId = techSocketMap.get(techId);
+        console.log("tech found", technicianSocketId);
+    
+        if (technicianSocketId) {
+          io.to(technicianSocketId).emit('newSupportRequest', request);
+          console.log(`Sent request to technician ${techId}`);
         } else {
-          console.log(`Technician with ID ${techId} not found`);
+          console.log(`Technician with ID ${techId} not found or offline`);
           socket.emit('supportError', { message: 'Technician not available' });
         }
       } else {
-        for (const [_, technician] of technicians) {
+        for (const [techId, technician] of technicians) {
           io.to(technician.socketId).emit('newSupportRequest', request);
         }
+        console.log(`Broadcasted request to all technicians`);
       }
     });
     
-
-      socket.on('technicianOnline', ({ technicianId, technicianName }) => {
+    
+    socket.on('technicianOnline', ({ technicianId, technicianName }) => {
       console.log(`Technician ${technicianName} (${technicianId}) is online`);
-      
+    
       const technicianInfo: Technician = {
         technicianId,
         technicianName,
         socketId: socket.id
       };
-      
+    
       technicians.set(technicianId, technicianInfo);
       techSocketMap.set(technicianId, socket.id);
-
-       for (const [_, request] of supportRequests) {
-        socket.emit('newSupportRequest', request);
+    
+      for (const [_, request] of supportRequests) {
+        if (!request.techId || request.techId === technicianId) {
+          socket.emit('newSupportRequest', request);
+        }
       }
     });
+    
+    
+    
     socket.on('acceptSupport', ({ userId, technicianId, technicianName }) => {
       console.log(`Technician ${technicianName} accepted support for user ${userId}`);
       
