@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
-
+const { ObjectId } = mongoose.Schema;
 export interface ICallSession extends Document {
   _id: mongoose.Types.ObjectId | string;
   userId: string;
@@ -27,8 +27,9 @@ const callSessionSchema: Schema = new Schema(
       required: true,
     },
     technicianId: {
-      type: String,
-      required: true,
+        type: ObjectId,
+        ref: "users",
+        required: true,
     },
     startedAt: {
       type: Date,
