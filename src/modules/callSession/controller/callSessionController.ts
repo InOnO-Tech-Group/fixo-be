@@ -35,16 +35,16 @@ const getCallSessionsInRange = async (req: Request, res: Response) => {
   try {
     const { start, end } = req.query;
     if (!start || !end) {
-      return res.status(400).json({ message: "Start and end dates are required" });
+      res.status(400).json({ message: "Start and end dates are required" });
     }
 
     const startDate = new Date(start as string);
     const endDate = new Date(end as string);
 
     const sessions = await callSessionRepository.findCallSessionsInRange(startDate, endDate);
-    return res.status(200).json(sessions);
+    res.status(200).json(sessions);
   } catch (error) {
-    return res.status(500).json({ message: "Failed to get sessions in range", error });
+    res.status(500).json({ message: "Failed to get sessions in range", error });
   }
 };
 
