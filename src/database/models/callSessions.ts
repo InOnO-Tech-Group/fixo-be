@@ -3,18 +3,18 @@ const { ObjectId } = mongoose.Schema;
 export interface ICallSession extends Document {
   _id: mongoose.Types.ObjectId | string;
   userId: string;
-  technicianId: string;
-  startedAt: Date;
-  endedAt: Date;
+  technicianId?: string;
+  startedAt?: Date;
+  endedAt?: Date;
   duration?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
 export interface ICallSessionInput {
     userId: string;
-    technicianId: string;
-    startedAt: Date;
-    endedAt: Date;
+    technicianId?: string;
+    startedAt?: Date;
+    endedAt?: Date;
     duration?: number;
   }
   
@@ -36,20 +36,17 @@ const callSessionSchema: Schema = new Schema(
     technicianId: {
         type: ObjectId,
         ref: "users",
-        required: true,
     },
     startedAt: {
       type: Date,
-      required: true,
     },
     endedAt: {
       type: Date,
-      required: true,
     },
     duration: {
       type: Number,
       required: true,
-      min: 1,
+      min: 0,
     },
   },
   {

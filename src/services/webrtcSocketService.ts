@@ -29,7 +29,7 @@ export const setupWebRTCHandlers = (io: Server) => {
   io.on('connection', (socket) => {
     console.log('New socket connection:', socket.id);
     
-    socket.on('requestSupport', ({ userId, username, techId }) => {
+    socket.on('requestSupport', async ({ userId, username, techId }) => {
       console.log(`User ${username} (${userId}) requested support`);
     
       const request: SupportRequest = {
@@ -41,26 +41,31 @@ export const setupWebRTCHandlers = (io: Server) => {
     
       supportRequests.set(userId, request);
       userSocketMap.set(userId, socket.id);
-      
+    
+      try {
+        await callSessionRepository.createCallSession({
+          userId,
+          technicianId: techId || null,
+          duration: 0,
+        });
+        console.log(`Initial session placeholder saved for ${userId}`);
+      } catch (err) {
+        console.error('Failed to insert initial session:', err);
+      }
+    
       if (techId) {
         const technicianSocketId = techSocketMap.get(techId);
-        console.log("tech found", technicianSocketId);
-    
         if (technicianSocketId) {
           io.to(technicianSocketId).emit('newSupportRequest', request);
-          console.log(`Sent request to technician ${techId}`);
         } else {
-          console.log(`Technician with ID ${techId} not found or offline`);
           socket.emit('supportError', { message: 'Technician not available' });
         }
       } else {
         for (const [techId, technician] of technicians) {
           io.to(technician.socketId).emit('newSupportRequest', request);
         }
-        console.log(`Broadcasted request to all technicians`);
       }
     });
-    
     
     socket.on('technicianOnline', ({ technicianId, technicianName }) => {
       console.log(`Technician ${technicianName} (${technicianId}) is online`);
@@ -173,17 +178,17 @@ export const setupWebRTCHandlers = (io: Server) => {
       const durationSeconds = startTime
         ? Math.floor((endTime - startTime) / 1000)
         : 0;
-    
-      if (startTime && durationSeconds >= 60 && technicianId) {
-        try {
-          await callSessionRepository.createCallSession({
+        
+        if (startTime && durationSeconds >= 60 && technicianId) {
+          try {
+           await callSessionRepository.updateCallSession({
             userId,
-            technicianId,
             startedAt: new Date(startTime),
             endedAt: new Date(endTime),
             duration: durationSeconds,
-          });
-          console.log(`Session saved: ${userId} - ${technicianId}`);
+            technicianId
+          });          
+          console.log(`Session Updated: ${userId} - ${technicianId}`);
         } catch (err) {
           console.error('Failed to save session:', err);
         }
