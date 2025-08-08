@@ -7,7 +7,9 @@ const createCallSession = async (req: Request, res: Response) => {
     const session = await callSessionRepository.createCallSession(data);
     return res.status(201).json(session);
   } catch (error) {
-    return res.status(500).json({ message: "Failed to create call session", error });
+    return res
+      .status(500)
+      .json({ message: "Failed to create call session", error });
   }
 };
 
@@ -16,7 +18,9 @@ const getAllCallSessions = async (req: Request, res: Response) => {
     const sessions = await callSessionRepository.findAllCallSessions();
     return res.status(200).json(sessions);
   } catch (error) {
-    return res.status(500).json({ message: "Failed to get call sessions", error });
+    return res
+      .status(500)
+      .json({ message: "Failed to get call sessions", error });
   }
 };
 
@@ -24,10 +28,13 @@ const getCallSessionById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const session = await callSessionRepository.findCallSessionById(id);
-    if (!session) return res.status(404).json({ message: "Call session not found" });
+    if (!session)
+      return res.status(404).json({ message: "Call session not found" });
     return res.status(200).json(session);
   } catch (error) {
-    return res.status(500).json({ message: "Failed to get call session", error });
+    return res
+      .status(500)
+      .json({ message: "Failed to get call session", error });
   }
 };
 
@@ -39,9 +46,15 @@ const getCallSessionsInRange = async (req: Request, res: Response) => {
     }
 
     const startDate = new Date(start as string);
-    const endDate = new Date(end as string);
+    const endDate = new Date(new Date(end as string));
 
-    const sessions = await callSessionRepository.findCallSessionsInRange(startDate, endDate);   
+    // Add 1 day to end date
+    endDate.setDate(endDate.getDate() + 1);
+
+    const sessions = await callSessionRepository.findCallSessionsInRange(
+      startDate,
+      endDate
+    );
     res.status(200).json(sessions);
   } catch (error) {
     res.status(500).json({ message: "Failed to get sessions in range", error });
