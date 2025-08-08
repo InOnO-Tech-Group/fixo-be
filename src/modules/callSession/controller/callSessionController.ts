@@ -41,7 +41,7 @@ const getCallSessionsInRange = async (req: Request, res: Response) => {
     const startDate = new Date(start as string);
     const endDate = new Date(end as string);
 
-    const sessions = await callSessionRepository.findCallSessionsInRange(startDate, endDate);
+    const sessions = await callSessionRepository.findCallSessionsInRange(startDate, endDate);   
     res.status(200).json(sessions);
   } catch (error) {
     res.status(500).json({ message: "Failed to get sessions in range", error });
